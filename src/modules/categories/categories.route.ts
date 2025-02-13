@@ -1,10 +1,10 @@
 import express, { Router } from "express";
-import { productController } from "./category.controller";
+import { productController } from "./categories.controller";
 
 const router = express.Router();
 
 // Create a new category
-router.post("/create", productController.createCategory);
+router.post("", productController.createCategory);
 
 // Get all categories
 router.get("/all", productController.getAllCategory);

@@ -1,11 +1,12 @@
 import { paginationHelpers } from "@/helpers/paginationHelper";
 import { IAuthUser, IGenericResponse } from "@/interfaces/common";
 import { IPaginationOptions } from "@/interfaces/pagination";
+import { uploadMultipleOnCloudinary } from "@/shared/cloudinary";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
 import ApiError from "../../errors/ApiError";
-import Category from "../category/category.models";
+import Category from "../categories/categories.models";
 import Product from "./product.models";
 import { productSchema, productUpdateSchema } from "./product.schemas";
 import { generateSku } from "./product.utils";
@@ -14,6 +15,7 @@ import { generateSku } from "./product.utils";
 const createProduct = async (req: Request) => {
     try {
         console.log("The body is:", req.body);
+        //console.log("The Request is:", req);
 
         // Validate the request body against the product schema
         const parseBody = productSchema.safeParse(req.body);
@@ -38,6 +40,41 @@ const createProduct = async (req: Request) => {
                 "Invalid category. Category does not exist."
             );
         }
+
+        const images = parseBody.data.images;
+
+        if (!images || !Array.isArray(images) || images.length === 0) {
+            throw new ApiError(
+                StatusCodes.CONFLICT,
+                "Product with this name already exists in this category."
+            );
+        }
+
+        const imageUrls: string[] = [];
+
+        // Upload each base64 image to Cloudinary
+        for (const image of images) {
+            if (!image.base64) continue;
+
+            // Extract the base64 part after "base64,"
+            const base64Data = image.base64.split(",")[1];
+
+            const result = await uploadMultipleOnCloudinary([
+                `data:image/webp;base64,${base64Data}`,
+            ]);
+
+            imageUrls.push(...result.map((res) => res.url));
+            console.log("The result is:", result);
+        }
+
+        // const filePaths = (req.files as Express.Multer.File[]).map(
+        //     (file) => file.path
+        // );
+        // const uploadResults = await uploadMultipleOnCloudinary(filePaths);
+        // // Transform it into an array of URLs
+        // const imageUrls = uploadResults.map((image) => image.url);
+
+        // console.log("The uploaded files is:", uploadResults);
 
         // Check if product already exists in the same category (to prevent duplicates)
         const existingProduct = await Product.findOne({
@@ -66,6 +103,7 @@ const createProduct = async (req: Request) => {
             ...parseBody.data,
             finalPrice,
             sku,
+            images: imageUrls,
         });
         console.log("The product is:", product);
 
@@ -112,8 +150,11 @@ const updateProduct = async (req: Request) => {
 
         // Check if SKU is being updated and throw an error if it is
         if (parseBody.data.sku) {
-          throw new ApiError(StatusCodes.BAD_REQUEST, "SKU cannot be updated");
-      }
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "SKU cannot be updated"
+            );
+        }
 
         // Calculate finalPrice if price or discount is updated
         let finalPrice;

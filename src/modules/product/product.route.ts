@@ -1,10 +1,11 @@
 import express from "express";
 import { productController } from "./product.controller";
+import { upload } from "@/middlewares/multer.middleware";
 
 const router = express.Router();
 
 // Create a new Product
-router.post("/create", productController.createProduct);
+router.post("/create",upload.array("images",10), productController.createProduct);
 
 // Update a Product
 router.patch("/:id", productController.updateProduct);

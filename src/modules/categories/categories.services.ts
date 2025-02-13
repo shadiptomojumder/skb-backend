@@ -1,8 +1,9 @@
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
-import Category from "./category.models";
-import  { categorySchema, categoryUpdateSchema } from "./category.schemas";
+import Category from "./categories.models";
+import { categorySchema, categoryUpdateSchema } from "./categories.schemas";
+import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
 
 // Function to create a new category
 const createCategory = async (req: Request) => {
@@ -10,7 +11,6 @@ const createCategory = async (req: Request) => {
         // Validate the request body against the category schema
         const parseBody = categorySchema.safeParse(req.body);
         console.log("parseBody is:", parseBody);
-        
 
         // If validation fails, collect error messages and throw a BAD_REQUEST error
         if (!parseBody.success) {
@@ -44,10 +44,23 @@ const createCategory = async (req: Request) => {
             );
         }
 
+        
+        // Upload the thumbnail image to Cloudinary
+        let thumbnailUrl = "";
+        if (parseBody.data.thumbnail && parseBody.data.thumbnail.base64) {
+            const base64Data = parseBody.data.thumbnail.base64.split(",")[1];
+            const result = await uploadSingleOnCloudinary(`data:image/webp;base64,${base64Data}`);
+            thumbnailUrl = result?.url || "";
+        }
+
+        console.log("The thumbnailUrl result is: ", thumbnailUrl);
+        
+
         // Create a new category in the database
         const category = new Category({
             ...parseBody.data,
             value: generatedValue,
+            thumbnail: thumbnailUrl,
         });
 
         await category.save();

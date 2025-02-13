@@ -2,7 +2,7 @@ import ApiResponse from "@/shared/ApiResponse";
 import asyncErrorHandler from "@/shared/asyncErrorHandler";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { ProductService } from "./category.services";
+import { ProductService } from "./categories.services";
 
 // Controller function to create a new category
 const createCategory = asyncErrorHandler(

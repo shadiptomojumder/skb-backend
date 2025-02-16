@@ -22,6 +22,14 @@ const CategorySchema = new mongoose.Schema(
     }
 );
 
+CategorySchema.set("toJSON", {
+    transform: (doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret.__v; // Optional: remove __v
+    }
+});
+
 CategorySchema.index({ title: 1 });
 CategorySchema.index({ value: 1 });
 

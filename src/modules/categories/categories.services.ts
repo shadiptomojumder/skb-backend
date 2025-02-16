@@ -8,6 +8,10 @@ import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
 // Function to create a new category
 const createCategory = async (req: Request) => {
     try {
+
+        console.log("The request was:",req);
+        console.log("The count is:",req.body.count,typeof(Number(req.body.count)));
+        
         // Validate the request body against the category schema
         const parseBody = categorySchema.safeParse(req.body);
         console.log("parseBody is:", parseBody);
@@ -47,9 +51,14 @@ const createCategory = async (req: Request) => {
         
         // Upload the thumbnail image to Cloudinary
         let thumbnailUrl = "";
-        if (parseBody.data.thumbnail && parseBody.data.thumbnail.base64) {
-            const base64Data = parseBody.data.thumbnail.base64.split(",")[1];
-            const result = await uploadSingleOnCloudinary(`data:image/webp;base64,${base64Data}`);
+        // if (parseBody.data.thumbnail && parseBody.data.thumbnail.base64) {
+        //     const base64Data = parseBody.data.thumbnail.base64.split(",")[1];
+        //     const result = await uploadSingleOnCloudinary(`data:image/webp;base64,${base64Data}`);
+        //     thumbnailUrl = result?.url || "";
+        // }
+
+        if (req.file) {
+            const result = await uploadSingleOnCloudinary(req.file.path);
             thumbnailUrl = result?.url || "";
         }
 

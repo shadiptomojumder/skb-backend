@@ -57,7 +57,7 @@ const deleteCategory = asyncErrorHandler(
     }
 );
 
-export const productController = {
+export const categoriesController = {
     createCategory,
     updateCategory,
     getAllCategory,

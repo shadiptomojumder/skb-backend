@@ -13,28 +13,28 @@ interface UploadResponse {
     [key: string]: any;
 }
 
-// export const uploadSingleOnCloudinary = async (localFilePath: string): Promise<UploadResponse | null> => {
-//     if (!localFilePath) return null;
+export const uploadSingleOnCloudinary = async (localFilePath: string): Promise<UploadResponse | null> => {
+    if (!localFilePath) return null;
 
-//     try {
-//         const response: UploadResponse = await cloudinary.uploader.upload(localFilePath, {
-//             resource_type: "auto",
-//         });
+    try {
+        const response: UploadResponse = await cloudinary.uploader.upload(localFilePath, {
+            resource_type: "auto",
+        });
 
-//         return response;
-//     } catch (error) {
-//         console.error("Cloudinary Upload Error:", error);
-//         throw new Error("Failed to upload file to Cloudinary");
-//     } finally {
-//         try {
-//             await fs.unlink(localFilePath); // Asynchronous file deletion
-//         } catch (unlinkError) {
-//             console.warn("Failed to delete local file:", unlinkError);
-//         }
-//     }
-// };
+        return response;
+    } catch (error) {
+        console.error("Cloudinary Upload Error:", error);
+        throw new Error("Failed to upload file to Cloudinary");
+    } finally {
+        try {
+            await fs.unlink(localFilePath); // Asynchronous file deletion
+        } catch (unlinkError) {
+            console.warn("Failed to delete local file:", unlinkError);
+        }
+    }
+};
 
-export const uploadSingleOnCloudinary = async (base64: string): Promise<UploadResponse | null> => {
+export const uploadSingleOnCloudinaryop = async (base64: string): Promise<UploadResponse | null> => {
     if (!base64) return null;
 
     try {

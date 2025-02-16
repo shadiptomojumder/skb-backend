@@ -1,18 +1,19 @@
 import express, { Router } from "express";
-import { productController } from "./categories.controller";
+import { categoriesController } from "./categories.controller";
+import { upload } from "@/middlewares/multer.middleware";
 
 const router = express.Router();
 
 // Create a new category
-router.post("", productController.createCategory);
+router.post("",upload.single("thumbnail"), categoriesController.createCategory);
 
 // Get all categories
-router.get("/all", productController.getAllCategory);
+router.get("/all", categoriesController.getAllCategory);
 
 // Update a category
-router.patch("/:id", productController.updateCategory);
+router.patch("/:id", categoriesController.updateCategory);
 
 // Delete a category by ID
-router.delete("/:id", productController.deleteCategory);
+router.delete("/:id", categoriesController.deleteCategory);
 
 export const CategoryRoutes:Router = router;

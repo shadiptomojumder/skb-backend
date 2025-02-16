@@ -7,12 +7,7 @@ export const productSchema = z.object({
         .min(1, { message: "Product name is required" })
         .max(255, { message: "Product name must be less than 255 characters" }),
 
-    price: z
-        .number()
-        .positive({ message: "Price must be a positive number" })
-        .or(
-            z.number().positive({ message: "Price must be a positive number" })
-        ),
+    price: z.any(),
 
     discount: z
         .number()

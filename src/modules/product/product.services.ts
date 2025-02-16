@@ -15,7 +15,6 @@ import { generateSku } from "./product.utils";
 const createProduct = async (req: Request) => {
     try {
         console.log("The body is:", req.body);
-        //console.log("The Request is:", req);
 
         // Validate the request body against the product schema
         const parseBody = productSchema.safeParse(req.body);
@@ -41,40 +40,20 @@ const createProduct = async (req: Request) => {
             );
         }
 
-        const images = parseBody.data.images;
 
-        if (!images || !Array.isArray(images) || images.length === 0) {
-            throw new ApiError(
-                StatusCodes.CONFLICT,
-                "Product with this name already exists in this category."
-            );
-        }
 
-        const imageUrls: string[] = [];
+        
 
-        // Upload each base64 image to Cloudinary
-        for (const image of images) {
-            if (!image.base64) continue;
 
-            // Extract the base64 part after "base64,"
-            const base64Data = image.base64.split(",")[1];
+        const filePaths = (req.files as Express.Multer.File[]).map(
+            (file) => file.path
+        );
+        const uploadResults = await uploadMultipleOnCloudinary(filePaths);
+        // Transform it into an array of URLs
+        const imageUrls = uploadResults.map((image) => image.url);
 
-            const result = await uploadMultipleOnCloudinary([
-                `data:image/webp;base64,${base64Data}`,
-            ]);
-
-            imageUrls.push(...result.map((res) => res.url));
-            console.log("The result is:", result);
-        }
-
-        // const filePaths = (req.files as Express.Multer.File[]).map(
-        //     (file) => file.path
-        // );
-        // const uploadResults = await uploadMultipleOnCloudinary(filePaths);
-        // // Transform it into an array of URLs
-        // const imageUrls = uploadResults.map((image) => image.url);
-
-        // console.log("The uploaded files is:", uploadResults);
+        console.log("The uploaded files is:", uploadResults);
+        console.log("The imageUrls  is:", imageUrls);
 
         // Check if product already exists in the same category (to prevent duplicates)
         const existingProduct = await Product.findOne({

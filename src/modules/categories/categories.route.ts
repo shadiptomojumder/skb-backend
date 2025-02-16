@@ -8,7 +8,7 @@ const router = express.Router();
 router.post("",upload.single("thumbnail"), categoriesController.createCategory);
 
 // Get all categories
-router.get("/all", categoriesController.getAllCategory);
+router.get("", categoriesController.getAllCategory);
 
 // Update a category
 router.patch("/:id", categoriesController.updateCategory);

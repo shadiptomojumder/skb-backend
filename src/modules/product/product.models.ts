@@ -33,7 +33,7 @@ const ProductSchema = new mongoose.Schema(
             default: 0,
         },
         images: {
-            type: [mongoose.Schema.Types.Mixed],
+            type: [String],
             default: [],
         },
         sku: {
@@ -53,23 +53,24 @@ const ProductSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
-        toJSON: {
-            transform: (doc, ret) => {
-                ret.price = parseFloat(ret.price.toString());
-                ret.finalPrice = parseFloat(ret.finalPrice.toString());
-                return ret;
-            },
-        },
     }
 );
+
+ProductSchema.set("toJSON", {
+    transform: (doc, ret) => {
+        ret.id = ret._id;
+        ret.price = parseFloat(ret.price.toString());
+        ret.finalPrice = parseFloat(ret.finalPrice.toString());
+        delete ret._id;
+        delete ret.__v; // Optional: remove __v
+    },
+});
 
 ProductSchema.index({ name: 1 }); // Text Search Optimization
 ProductSchema.index({ category: 1 }); // Faster Category Lookups
 ProductSchema.index({ sku: 1 });
 ProductSchema.index({ price: 1 }); // Price-based Filtering Optimization
 ProductSchema.index({ createdAt: -1 }); // Sorting Optimization
-
-
 
 const Product = mongoose.model("Product", ProductSchema);
 

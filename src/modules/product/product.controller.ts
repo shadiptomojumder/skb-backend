@@ -10,9 +10,6 @@ import ApiError from "@/errors/ApiError";
 
 // Controller function to create a new product
 const createProduct = asyncErrorHandler(async (req: Request, res: Response) => {
-   //console.log("The Request is:",req);
-   console.log("The Request files is:",req.files);
-  
   const product = await ProductService.createProduct(req);
   ApiResponse(res, {
     statusCode: StatusCodes.OK,

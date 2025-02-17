@@ -224,7 +224,10 @@ const getAllProduct = async (
                     ? { [options.sortBy]: options.sortOrder }
                     : { createdAt: -1 } // Default to newest first
             )
-            .populate("category")
+            .populate({
+                path: "category",
+                select: "-createdAt -updatedAt" // Exclude createdAt and updatedAt fields
+            })
             .exec();
 
         // Convert Decimal128 values to numbers

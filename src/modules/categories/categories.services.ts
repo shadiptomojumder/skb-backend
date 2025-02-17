@@ -1,17 +1,20 @@
+import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
 import Category from "./categories.models";
 import { categorySchema, categoryUpdateSchema } from "./categories.schemas";
-import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
 
 // Function to create a new category
 const createCategory = async (req: Request) => {
     try {
+        console.log("The request was:", req);
+        console.log(
+            "The count is:",
+            req.body.count,
+            typeof Number(req.body.count)
+        );
 
-        console.log("The request was:",req);
-        console.log("The count is:",req.body.count,typeof(Number(req.body.count)));
-        
         // Validate the request body against the category schema
         const parseBody = categorySchema.safeParse(req.body);
         console.log("parseBody is:", parseBody);
@@ -48,7 +51,6 @@ const createCategory = async (req: Request) => {
             );
         }
 
-        
         // Upload the thumbnail image to Cloudinary
         let thumbnailUrl = "";
         // if (parseBody.data.thumbnail && parseBody.data.thumbnail.base64) {
@@ -63,7 +65,6 @@ const createCategory = async (req: Request) => {
         }
 
         console.log("The thumbnailUrl result is: ", thumbnailUrl);
-        
 
         // Create a new category in the database
         const category = new Category({
@@ -116,15 +117,32 @@ const updateCategory = async (req: Request) => {
                 .replace(/[^a-z0-9_]/g, ""); // Remove special characters
         }
 
+        // Upload the thumbnail image to Cloudinary
+        let thumbnailUrl = "";
+
+        if (req.file) {
+            const result = await uploadSingleOnCloudinary(req.file.path);
+            thumbnailUrl = result?.url || "";
+        }
+
+        console.log("The thumbnailUrl result is: ", thumbnailUrl);
+
         // Update the category with the provided fields
-        const category = await Category.findByIdAndUpdate(
-            id,
-            {
-                ...parseBody.data,
-                ...(generatedValue && { value: generatedValue }),
-            },
-            { new: true }
-        );
+        const updateData = {
+            ...parseBody.data,
+            ...(generatedValue && { value: generatedValue }),
+        };
+
+        // If a new image was uploaded, include the new thumbnail URL in the update data
+        if (thumbnailUrl) {
+            updateData.thumbnail = thumbnailUrl;
+        }
+
+        const category = await Category.findByIdAndUpdate(id, updateData, {
+            new: true,
+        });
+
+        console.log("the updated category:", category);
 
         // If category is not found, throw a NOT_FOUND error
         if (!category) {
@@ -146,6 +164,7 @@ const updateCategory = async (req: Request) => {
         }
     }
 };
+
 // Function to get all categories
 const getAllCategory = async (req: Request) => {
     try {
@@ -159,6 +178,33 @@ const getAllCategory = async (req: Request) => {
         }
 
         return categories;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                error.message
+            );
+        } else {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "An unknown error occurred"
+            );
+        }
+    }
+};
+
+// Function to get a single category by ID
+const getSingleCategory = async (id: string) => {
+    try {
+        // Retrieve the category with the specified ID from the database
+        const category = await Category.findById(id);
+
+        // If the category is not found, throw a NOT_FOUND error
+        if (!category) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+        }
+
+        return category;
     } catch (error) {
         if (error instanceof Error) {
             throw new ApiError(
@@ -206,4 +252,5 @@ export const ProductService = {
     updateCategory,
     getAllCategory,
     deleteCategory,
+    getSingleCategory,
 };

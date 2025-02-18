@@ -8,7 +8,7 @@ type IApiReponse<T> = {
     page: number;
     limit: number;
     total: number;
-  };
+  } | null;
   data?: T | null;
 };
 
@@ -17,8 +17,8 @@ const ApiResponse = <T>(res: Response, data: IApiReponse<T>): void => {
     statusCode: data.statusCode,
     success: data.success,
     message: data.message || null,
-    meta: data.meta || null || undefined,
-    data: data.data || null || undefined,
+    meta: data.meta || null,
+    data: data.data || null,
   };
 
   res.status(data.statusCode).json(responseData);

@@ -1,5 +1,6 @@
 import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
 import { Request } from "express";
+import fs from "fs";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
 import Category from "./categories.models";
@@ -8,13 +9,6 @@ import { categorySchema, categoryUpdateSchema } from "./categories.schemas";
 // Function to create a new category
 const createCategory = async (req: Request) => {
     try {
-        console.log("The request was:", req);
-        console.log(
-            "The count is:",
-            req.body.count,
-            typeof Number(req.body.count)
-        );
-
         // Validate the request body against the category schema
         const parseBody = categorySchema.safeParse(req.body);
         console.log("parseBody is:", parseBody);
@@ -25,6 +19,14 @@ const createCategory = async (req: Request) => {
                 .map((error) => error.message)
                 .join(",");
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
+        }
+
+        // Check if the category image is provided
+        if (!req.file) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Category image is required"
+            );
         }
 
         // Generate a unique `value` from `title`
@@ -45,6 +47,8 @@ const createCategory = async (req: Request) => {
 
         // If category exists, throw a CONFLICT error
         if (existingCategory) {
+            // Delete the locally stored file before throwing an error
+            fs.unlinkSync(req.file.path);
             throw new ApiError(
                 StatusCodes.CONFLICT,
                 "Category with this title or value already exists"
@@ -53,18 +57,13 @@ const createCategory = async (req: Request) => {
 
         // Upload the thumbnail image to Cloudinary
         let thumbnailUrl = "";
-        // if (parseBody.data.thumbnail && parseBody.data.thumbnail.base64) {
-        //     const base64Data = parseBody.data.thumbnail.base64.split(",")[1];
-        //     const result = await uploadSingleOnCloudinary(`data:image/webp;base64,${base64Data}`);
-        //     thumbnailUrl = result?.url || "";
-        // }
 
         if (req.file) {
             const result = await uploadSingleOnCloudinary(req.file.path);
             thumbnailUrl = result?.url || "";
         }
 
-        console.log("The thumbnailUrl result is: ", thumbnailUrl);
+        // console.log("The thumbnailUrl result is: ", thumbnailUrl);
 
         // Create a new category in the database
         const category = new Category({
@@ -77,17 +76,11 @@ const createCategory = async (req: Request) => {
 
         return category;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error; // Keep the original error's status code
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        ); // Only catch non-ApiErrors
     }
 };
 

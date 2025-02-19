@@ -13,13 +13,20 @@ interface UploadResponse {
     [key: string]: any;
 }
 
-export const uploadSingleOnCloudinary = async (localFilePath: string): Promise<UploadResponse | null> => {
+export const uploadSingleOnCloudinary = async (
+    localFilePath: string,
+    folderName?: string
+): Promise<UploadResponse | null> => {
     if (!localFilePath) return null;
 
     try {
-        const response: UploadResponse = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto",
-        });
+        const response: UploadResponse = await cloudinary.uploader.upload(
+            localFilePath,
+            {
+                resource_type: "auto",
+                folder: folderName || "products", // Use provided folderName or default,
+            }
+        );
 
         return response;
     } catch (error) {
@@ -34,7 +41,9 @@ export const uploadSingleOnCloudinary = async (localFilePath: string): Promise<U
     }
 };
 
-export const uploadSingleOnCloudinaryBase64 = async (base64: string): Promise<UploadResponse | null> => {
+export const uploadSingleOnCloudinaryBase64 = async (
+    base64: string
+): Promise<UploadResponse | null> => {
     if (!base64) return null;
 
     try {
@@ -48,9 +57,10 @@ export const uploadSingleOnCloudinaryBase64 = async (base64: string): Promise<Up
     }
 };
 
-
 // Function to Upload Multiple Files to Cloudinary
-export const uploadMultipleOnCloudinary = async (localFilePaths: string[]): Promise<UploadResponse[]> => {
+export const uploadMultipleOnCloudinary = async (
+    localFilePaths: string[]
+): Promise<UploadResponse[]> => {
     if (!localFilePaths || localFilePaths.length === 0) return [];
 
     try {
@@ -82,7 +92,9 @@ export const uploadMultipleOnCloudinary = async (localFilePaths: string[]): Prom
 };
 
 // Function to Upload Multiple Base64 Images to Cloudinary
-export const uploadMultipleOnCloudinaryBase64 = async (base64Images: string[]): Promise<UploadResponse[]> => {
+export const uploadMultipleOnCloudinaryBase64 = async (
+    base64Images: string[]
+): Promise<UploadResponse[]> => {
     if (!base64Images || base64Images.length === 0) return [];
 
     try {
@@ -102,3 +114,26 @@ export const uploadMultipleOnCloudinaryBase64 = async (base64Images: string[]): 
     }
 };
 
+export const deleteFromCloudinary = async (
+    publicId: string
+): Promise<{ success: boolean; result?: any; error?: string }> => {
+    try {
+        if (!publicId) {
+            throw new Error("Public ID is required for deletion.");
+        }
+
+        const result = await cloudinary.uploader.destroy(publicId);
+
+        if (result.result !== "ok") {
+            throw new Error(
+                `Failed to delete image from Cloudinary: ${result.result}`
+            );
+        }
+
+        console.log("Cloudinary delete successful:", result);
+        return { success: true, result };
+    } catch (error: any) {
+        console.error("Cloudinary delete error:", error.message);
+        return { success: false, error: error.message };
+    }
+};

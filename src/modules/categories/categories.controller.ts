@@ -2,13 +2,12 @@ import ApiResponse from "@/shared/ApiResponse";
 import asyncErrorHandler from "@/shared/asyncErrorHandler";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { ProductService } from "./categories.services";
-import ApiError from "@/errors/ApiError";
+import { CategoryService } from "./categories.services";
 
 // Controller function to create a new category
 const createCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await ProductService.createCategory(req);
+        const category = await CategoryService.createCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
@@ -21,11 +20,7 @@ const createCategory = asyncErrorHandler(
 // Controller function to update an existing category
 const updateCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        // Check if the request body is empty
-        if (Object.keys(req.body).length === 0 && !req.file) {
-            throw new ApiError(StatusCodes.BAD_REQUEST, "No data or file provided");
-        }
-        const category = await ProductService.updateCategory(req);
+        const category = await CategoryService.updateCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
@@ -38,7 +33,7 @@ const updateCategory = asyncErrorHandler(
 // Controller function to get all categories
 const getAllCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await ProductService.getAllCategory(req);
+        const category = await CategoryService.getAllCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
@@ -51,13 +46,12 @@ const getAllCategory = asyncErrorHandler(
 // Controller function to delete a category by ID
 const deleteCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const id = req.params.id;
-        const category = await ProductService.deleteCategory(id);
+        const result = await CategoryService.deleteCategory(req);
+
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category deleted successfully",
-            data: category,
+            message: `${result.message}`,
         });
     }
 );
@@ -66,7 +60,7 @@ const deleteCategory = asyncErrorHandler(
 const singleCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
         const id = req.params.id;
-        const category = await ProductService.getSingleCategory(id);
+        const category = await CategoryService.getSingleCategory(id);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
@@ -81,5 +75,5 @@ export const categoriesController = {
     updateCategory,
     getAllCategory,
     deleteCategory,
-    singleCategory
+    singleCategory,
 };

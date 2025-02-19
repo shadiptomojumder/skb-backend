@@ -1,4 +1,8 @@
-import { uploadSingleOnCloudinary } from "@/shared/cloudinary";
+import {
+    deleteFromCloudinary,
+    uploadSingleOnCloudinary,
+} from "@/shared/cloudinary";
+import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
 import { Request } from "express";
 import fs from "fs";
 import { StatusCodes } from "http-status-codes";
@@ -59,11 +63,14 @@ const createCategory = async (req: Request) => {
         let thumbnailUrl = "";
 
         if (req.file) {
-            const result = await uploadSingleOnCloudinary(req.file.path);
-            thumbnailUrl = result?.url || "";
+            const result = await uploadSingleOnCloudinary(
+                req.file.path,
+                "categories"
+            );
+            thumbnailUrl = result?.secure_url || "";
         }
 
-        // console.log("The thumbnailUrl result is: ", thumbnailUrl);
+        // console.log("The category thumbnailUrl is: ", thumbnailUrl);
 
         // Create a new category in the database
         const category = new Category({
@@ -144,17 +151,11 @@ const updateCategory = async (req: Request) => {
 
         return category;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -172,17 +173,11 @@ const getAllCategory = async (req: Request) => {
 
         return categories;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -199,48 +194,97 @@ const getSingleCategory = async (id: string) => {
 
         return category;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
 // Function to delete a category by ID
-const deleteCategory = async (id: string) => {
+const deleteCategory = async (req: Request) => {
     try {
-        // Delete the category with the specified ID from the database
-        const category = await Category.findByIdAndDelete(id);
+        const { id } = req.params;
+        const { ids } = req.body;
 
-        // If the category is not found, throw a NOT_FOUND error
-        if (!category) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
-        }
+        if (id) {
+            // Find the category to get the thumbnail (if exists)
+            const category = await Category.findById(id);
+            if (!category) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+            }
 
-        return category;
-    } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
+            // First, delete the category from the database
+            const deletedCategory = await Category.findByIdAndDelete(id);
+            if (!deletedCategory) {
+                throw new ApiError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    "Failed to delete category"
+                );
+            }
+
+            // Delete image from Cloudinary if the category has a thumbnail
+            if (category.thumbnail) {
+                const publicId = extractCloudinaryPublicId(category.thumbnail);
+                await deleteFromCloudinary(publicId);
+            }
+
+            return { message: "Category deleted successfully" };
+        } else if (ids && Array.isArray(ids)) {
+            // Validate that 'ids' is an array and contains valid values
+            if (!Array.isArray(ids) || ids.length === 0) {
+                throw new ApiError(
+                    StatusCodes.BAD_REQUEST,
+                    "Invalid request. 'ids' must be a non-empty array"
+                );
+            }
+
+            // Fetch all categories to ensure they exist
+            const existingCategories = await Category.find({
+                _id: { $in: ids },
+            });
+            if (existingCategories.length !== ids.length) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    "One or more category IDs do not exist"
+                );
+            }
+
+            // Delete categories from database first
+            const result = await Category.deleteMany({ _id: { $in: ids } });
+            if (result.deletedCount !== ids.length) {
+                throw new ApiError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    "Some categories could not be deleted"
+                );
+            }
+
+            // If successful, delete associated images
+            for (const category of existingCategories) {
+                if (category.thumbnail) {
+                    const publicId = extractCloudinaryPublicId(
+                        category.thumbnail
+                    );
+                    await deleteFromCloudinary(publicId);
+                }
+            }
+            return {
+                message: `${result.deletedCount} categories deleted successfully`,
+            };
         } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
+            throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid request");
         }
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
-export const ProductService = {
+export const CategoryService = {
     createCategory,
     updateCategory,
     getAllCategory,

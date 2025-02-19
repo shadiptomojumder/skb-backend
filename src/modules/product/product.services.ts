@@ -4,7 +4,6 @@ import { IPaginationOptions } from "@/interfaces/pagination";
 import { uploadMultipleOnCloudinary } from "@/shared/cloudinary";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
-import mongoose from "mongoose";
 import ApiError from "../../errors/ApiError";
 import Category from "../categories/categories.models";
 import Product from "./product.models";
@@ -39,11 +38,6 @@ const createProduct = async (req: Request) => {
                 "Invalid category. Category does not exist."
             );
         }
-
-
-
-        
-
 
         const filePaths = (req.files as Express.Multer.File[]).map(
             (file) => file.path
@@ -89,24 +83,11 @@ const createProduct = async (req: Request) => {
         await product.save();
         return product;
     } catch (error) {
-        if (error instanceof mongoose.Error.CastError) {
-            throw new ApiError(
-                StatusCodes.BAD_REQUEST,
-                "Invalid ObjectId format"
-            );
-        } else if (error instanceof ApiError) {
-            throw error;
-        } else if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -165,17 +146,11 @@ const updateProduct = async (req: Request) => {
         }
         return product;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -226,7 +201,7 @@ const getAllProduct = async (
             )
             .populate({
                 path: "category",
-                select: "-createdAt -updatedAt" // Exclude createdAt and updatedAt fields
+                select: "-createdAt -updatedAt", // Exclude createdAt and updatedAt fields
             })
             .exec();
 
@@ -248,17 +223,11 @@ const getAllProduct = async (
             data: result,
         };
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -275,17 +244,11 @@ const getSingleProduct = async (id: string) => {
 
         return product;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -302,17 +265,11 @@ const deleteSingleProduct = async (id: string) => {
 
         return product;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -336,17 +293,11 @@ const deleteMultipleProducts = async (ids: string[]) => {
 
         return result;
     } catch (error) {
-        if (error instanceof Error) {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                error.message
-            );
-        } else {
-            throw new ApiError(
-                StatusCodes.INTERNAL_SERVER_ERROR,
-                "An unknown error occurred"
-            );
-        }
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 

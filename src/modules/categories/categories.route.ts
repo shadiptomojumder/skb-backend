@@ -17,6 +17,6 @@ router.get("/:id", categoriesController.singleCategory);
 router.patch("/:id",upload.single("thumbnail"), categoriesController.updateCategory);
 
 // Delete a category by ID
-router.delete("/:id", categoriesController.deleteCategory);
+router.delete("/:id?", categoriesController.deleteCategory);
 
 export const CategoryRoutes:Router = router;

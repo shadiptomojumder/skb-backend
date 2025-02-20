@@ -6,7 +6,7 @@ const router = express.Router();
 
 // Create a new Product
 router.post(
-    "/create",
+    "",
     upload.array("images", 10),
     productController.createProduct
 );

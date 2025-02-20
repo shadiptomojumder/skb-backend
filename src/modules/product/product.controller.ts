@@ -39,6 +39,7 @@ const getAllProduct = asyncErrorHandler(async (req: Request, res: Response) => {
     "page",
     "sortBy",
     "sortOrder",
+    "all",
   ]);
   const user: IAuthUser = req.user as IAuthUser;
 
@@ -66,29 +67,13 @@ const getSingleProduct = asyncErrorHandler(async (req: Request, res: Response) =
 
 // Controller function to delete a single or multiple products
 const deleteProduct = asyncErrorHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { ids } = req.body;
+  const result = await ProductService.deleteProducts(req);
 
-  let result;
-  if (id) {
-    result = await ProductService.deleteSingleProduct(id);
-    ApiResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: "Product deleted successfully",
-      data: result,
-    });
-  } else if (ids && Array.isArray(ids)) {
-    result = await ProductService.deleteMultipleProducts(ids);
-    ApiResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: "Products deleted successfully",
-      data: result,
-    });
-  } else {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid request");
-  }
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: `${result.message}`,
+        });
 });
 
 

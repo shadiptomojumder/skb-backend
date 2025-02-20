@@ -114,26 +114,67 @@ export const uploadMultipleOnCloudinaryBase64 = async (
     }
 };
 
+// export const deleteFromCloudinary = async (
+//     publicId: string
+// ): Promise<{ success: boolean; result?: any; error?: string }> => {
+//     try {
+//         if (!publicId) {
+//             throw new Error("Public ID is required for deletion.");
+//         }
+
+//         const result = await cloudinary.uploader.destroy(publicId);
+
+//         if (result.result !== "ok") {
+//             throw new Error(
+//                 `Failed to delete image from Cloudinary: ${result.result}`
+//             );
+//         }
+
+//         console.log("Cloudinary delete successful:", result);
+//         return { success: true, result };
+//     } catch (error: any) {
+//         console.error("Cloudinary delete error:", error.message);
+//         return { success: false, error: error.message };
+//     }
+// };
+
 export const deleteFromCloudinary = async (
-    publicId: string
-): Promise<{ success: boolean; result?: any; error?: string }> => {
+    publicIdOrIds: string | string[]
+): Promise<{ success: boolean; results?: any[]; errors?: string[] }> => {
     try {
-        if (!publicId) {
-            throw new Error("Public ID is required for deletion.");
+        const publicIds = Array.isArray(publicIdOrIds)
+            ? publicIdOrIds
+            : [publicIdOrIds]; // Convert single string to an array
+
+        if (publicIds.length === 0) {
+            throw new Error("Public IDs array is required for deletion.");
         }
 
-        const result = await cloudinary.uploader.destroy(publicId);
+        const results = await Promise.all(
+            publicIds.map(async (publicId) => {
+                try {
+                    const result = await cloudinary.uploader.destroy(publicId);
+                    if (result.result !== "ok") {
+                        throw new Error(`Failed to delete image: ${publicId}`);
+                    }
+                    return { publicId, success: true, result };
+                } catch (error: any) {
+                    return { publicId, success: false, error: error.message };
+                }
+            })
+        );
 
-        if (result.result !== "ok") {
-            throw new Error(
-                `Failed to delete image from Cloudinary: ${result.result}`
-            );
+        const successResults = results.filter((r) => r.success);
+        const errors = results.filter((r) => !r.success).map((r) => r.error);
+
+        if (errors.length > 0) {
+            console.error("Some images failed to delete:", errors);
         }
 
-        console.log("Cloudinary delete successful:", result);
-        return { success: true, result };
+        return { success: errors.length === 0, results: successResults, errors };
     } catch (error: any) {
         console.error("Cloudinary delete error:", error.message);
-        return { success: false, error: error.message };
+        return { success: false, errors: [error.message] };
     }
 };
+

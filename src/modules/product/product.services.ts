@@ -1,7 +1,11 @@
 import { paginationHelpers } from "@/helpers/paginationHelper";
 import { IAuthUser, IGenericResponse } from "@/interfaces/common";
 import { IPaginationOptions } from "@/interfaces/pagination";
-import { uploadMultipleOnCloudinary } from "@/shared/cloudinary";
+import {
+    deleteFromCloudinary,
+    uploadMultipleOnCloudinary,
+} from "@/shared/cloudinary";
+import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
@@ -161,7 +165,7 @@ const getAllProduct = async (
     authUser: IAuthUser
 ): Promise<IGenericResponse<any[]>> => {
     try {
-        const { limit, page, skip } =
+        let { limit, page, skip } =
             paginationHelpers.calculatePagination(options);
 
         const andConditions: any[] = [];
@@ -273,6 +277,93 @@ const deleteSingleProduct = async (id: string) => {
     }
 };
 
+// Function to delete a single product by ID
+const deleteProducts = async (req: Request) => {
+    try {
+        const { id } = req.params;
+        const { ids } = req.body;
+        if (id) {
+            // Find the category to get the thumbnail (if exists)
+            const product = await Product.findById(id);
+            if (!product) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
+            }
+
+            // First, delete the product from the database
+            const deletedProduct = await Product.findByIdAndDelete(id);
+            if (!deletedProduct) {
+                throw new ApiError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    "Failed to delete product"
+                );
+            }
+
+            // Delete images from Cloudinary if the product has images
+            if (product.images && Array.isArray(product.images)) {
+                for (const imageUrl of product.images) {
+                    const publicId = extractCloudinaryPublicId(imageUrl);
+                    await deleteFromCloudinary(publicId);
+                }
+            }
+
+            return { message: "Product deleted successfully" };
+        } else if (ids && Array.isArray(ids)) {
+            // Validate that 'ids' is an array and contains valid values
+            if (!Array.isArray(ids) || ids.length === 0) {
+                throw new ApiError(
+                    StatusCodes.BAD_REQUEST,
+                    "Invalid request. 'ids' must be a non-empty array"
+                );
+            }
+
+            // Fetch all product to ensure they exist
+            const existingProducts = await Product.find({
+                _id: { $in: ids },
+            });
+            if (existingProducts.length !== ids.length) {
+                throw new ApiError(
+                    StatusCodes.NOT_FOUND,
+                    "One or more product IDs do not exist"
+                );
+            }
+
+            // Extract all image publicIds from Cloudinary (if available)
+            const imagePublicIds = existingProducts
+                .flatMap((product) => product.images || []) // Flatten all image arrays
+                .map((imageUrl) => extractCloudinaryPublicId(imageUrl));
+
+            // Delete products from database first
+            const result = await Product.deleteMany({ _id: { $in: ids } });
+            if (result.deletedCount !== ids.length) {
+                throw new ApiError(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    "Some products could not be deleted"
+                );
+            }
+
+            // Delete associated images from Cloudinary in parallel
+            if (imagePublicIds.length > 0) {
+                await Promise.all(
+                    imagePublicIds.map((publicId) =>
+                        deleteFromCloudinary(publicId)
+                    )
+                );
+            }
+            return {
+                message: `${result.deletedCount} categories deleted successfully`,
+            };
+        } else {
+            throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid request");
+        }
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
+    }
+};
+
 // Function to delete multiple products by their IDs
 const deleteMultipleProducts = async (ids: string[]) => {
     try {
@@ -308,4 +399,5 @@ export const ProductService = {
     getSingleProduct,
     deleteSingleProduct,
     deleteMultipleProducts,
+    deleteProducts,
 };

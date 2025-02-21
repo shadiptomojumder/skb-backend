@@ -31,6 +31,11 @@ const createProduct = async (req: Request) => {
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
+        // If user dont send any image then show an error
+        if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+            throw new ApiError(StatusCodes.BAD_REQUEST, "At least one image is required to create a product.");
+        }
+
         // Check if the provided category exists
         const existingCategory = await Category.findById(
             parseBody.data.category
@@ -46,7 +51,10 @@ const createProduct = async (req: Request) => {
         const filePaths = (req.files as Express.Multer.File[]).map(
             (file) => file.path
         );
-        const uploadResults = await uploadMultipleOnCloudinary(filePaths);
+        const uploadResults = await uploadMultipleOnCloudinary(
+            filePaths,
+            "products"
+        );
         // Transform it into an array of URLs
         const imageUrls = uploadResults.map((image) => image.url);
 
@@ -73,7 +81,9 @@ const createProduct = async (req: Request) => {
             : parseBody.data.price;
 
         // Generate a unique SKU for the product
-        const sku = generateSku(parseBody.data.category, parseBody.data.name);
+        const sku = await generateSku(parseBody.data.category, parseBody.data.name);
+        console.log("The Product SKU is:",sku);
+        
 
         // Create new product linked to the category
         const product = new Product({
@@ -87,6 +97,7 @@ const createProduct = async (req: Request) => {
         await product.save();
         return product;
     } catch (error) {
+        console.error("Error in createProduct:", error);
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
@@ -257,27 +268,6 @@ const getSingleProduct = async (id: string) => {
 };
 
 // Function to delete a single product by ID
-const deleteSingleProduct = async (id: string) => {
-    try {
-        // Delete the product with the specified ID from the database
-        const product = await Product.findByIdAndDelete(id);
-
-        // If the product is not found, throw a NOT_FOUND error
-        if (!product) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
-        }
-
-        return product;
-    } catch (error) {
-        if (error instanceof ApiError) throw error;
-        throw new ApiError(
-            StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
-        );
-    }
-};
-
-// Function to delete a single product by ID
 const deleteProducts = async (req: Request) => {
     try {
         const { id } = req.params;
@@ -364,40 +354,10 @@ const deleteProducts = async (req: Request) => {
     }
 };
 
-// Function to delete multiple products by their IDs
-const deleteMultipleProducts = async (ids: string[]) => {
-    try {
-        // Delete the products with the specified IDs from the database
-        const result = await Product.deleteMany({
-            _id: {
-                $in: ids,
-            },
-        });
-
-        // If no products are found to delete, throw a NOT_FOUND error
-        if (result.deletedCount === 0) {
-            throw new ApiError(
-                StatusCodes.NOT_FOUND,
-                "No products found to delete"
-            );
-        }
-
-        return result;
-    } catch (error) {
-        if (error instanceof ApiError) throw error;
-        throw new ApiError(
-            StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
-        );
-    }
-};
-
 export const ProductService = {
     createProduct,
     updateProduct,
     getAllProduct,
     getSingleProduct,
-    deleteSingleProduct,
-    deleteMultipleProducts,
     deleteProducts,
 };

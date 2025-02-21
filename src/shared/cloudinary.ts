@@ -59,7 +59,8 @@ export const uploadSingleOnCloudinaryBase64 = async (
 
 // Function to Upload Multiple Files to Cloudinary
 export const uploadMultipleOnCloudinary = async (
-    localFilePaths: string[]
+    localFilePaths: string[],
+    folderName?: string
 ): Promise<UploadResponse[]> => {
     if (!localFilePaths || localFilePaths.length === 0) return [];
 
@@ -67,7 +68,7 @@ export const uploadMultipleOnCloudinary = async (
         const uploadPromises = localFilePaths.map(async (filePath) => {
             const response = await cloudinary.uploader.upload(filePath, {
                 resource_type: "auto",
-                folder: "products", // Store in a specific folder
+                folder: folderName || "products", // Use provided folderName or default,
             });
             return { url: response.secure_url, public_id: response.public_id };
         });
@@ -114,29 +115,6 @@ export const uploadMultipleOnCloudinaryBase64 = async (
     }
 };
 
-// export const deleteFromCloudinary = async (
-//     publicId: string
-// ): Promise<{ success: boolean; result?: any; error?: string }> => {
-//     try {
-//         if (!publicId) {
-//             throw new Error("Public ID is required for deletion.");
-//         }
-
-//         const result = await cloudinary.uploader.destroy(publicId);
-
-//         if (result.result !== "ok") {
-//             throw new Error(
-//                 `Failed to delete image from Cloudinary: ${result.result}`
-//             );
-//         }
-
-//         console.log("Cloudinary delete successful:", result);
-//         return { success: true, result };
-//     } catch (error: any) {
-//         console.error("Cloudinary delete error:", error.message);
-//         return { success: false, error: error.message };
-//     }
-// };
 
 export const deleteFromCloudinary = async (
     publicIdOrIds: string | string[]

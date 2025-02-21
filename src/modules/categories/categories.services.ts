@@ -121,7 +121,7 @@ const updateCategory = async (req: Request) => {
         let thumbnailUrl = "";
 
         if (req.file) {
-            const result = await uploadSingleOnCloudinary(req.file.path);
+            const result = await uploadSingleOnCloudinary(req.file.path,"categories");
             thumbnailUrl = result?.url || "";
         }
 

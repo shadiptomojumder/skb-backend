@@ -1,4 +1,5 @@
 import Product from "./product.models";
+import fs from "fs";
 
 // Generate a SKU based on the product name, category, and an incrementing number (or unique id)
 export const generateSkuOld = (category: string, productName: string): string => {
@@ -23,6 +24,7 @@ export const productFilterAbleFields: string[] = [
     "updatedAt",
 ];
 
+// Function to generate a unique SKU for a product using the provided category and product name
 export const generateSku = async (category: string, productName: string): Promise<string> => {
   const categoryCode = category.substring(0, 3).toUpperCase(); // First 3 letters of category
   const productCode = productName.substring(0, 3).toUpperCase(); // First 3 letters of product name
@@ -40,4 +42,17 @@ export const generateSku = async (category: string, productName: string): Promis
   }
 
   return sku;
+};
+
+// Function to delete local files
+export const deleteLocalFiles = (filePaths: string[]) => {
+    filePaths.forEach((filePath) => {
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.error("Error deleting file:", filePath, err);
+            } else {
+                console.log("Deleted local file:", filePath);
+            }
+        });
+    });
 };

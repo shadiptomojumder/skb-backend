@@ -59,8 +59,7 @@ const deleteCategory = asyncErrorHandler(
 // Controller function to delete a category by ID
 const getCategoryById = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const id = req.params.id;
-        const result = await CategoryService.getSingleCategory(id);
+        const result = await CategoryService.getCategoryById(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,

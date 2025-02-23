@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
 import Category from "./categories.models";
 import { categorySchema, categoryUpdateSchema } from "./categories.schemas";
+import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 
 // Function to create a new category
 const createCategory = async (req: Request) => {
@@ -95,7 +96,8 @@ const createCategory = async (req: Request) => {
 const updateCategory = async (req: Request) => {
     try {
         // Category Id
-        const { id } = req.params;
+        const { categoryId } = req.params;
+        const file = req.file as Express.Multer.File;
 
         // Validate the request body against the category update schema
         const parseBody = categoryUpdateSchema.safeParse(req.body);
@@ -105,52 +107,62 @@ const updateCategory = async (req: Request) => {
             const errorMessages = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
+                deleteLocalFiles(file?.path);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        // Generate a unique `value` from `title` if title is updated
-        let generatedValue;
-        if (parseBody.data.title) {
-            generatedValue = parseBody.data.title
-                .toLowerCase()
-                .replace(/\s+/g, "_") // Convert spaces to underscores
-                .replace(/[^a-z0-9_]/g, ""); // Remove special characters
-        }
+        const { title } = parseBody.data;
 
-        // Upload the thumbnail image to Cloudinary
-        let thumbnailUrl = "";
+        const updateData: Record<string, any> = { ...parseBody.data };
 
-        if (req.file) {
-            const result = await uploadSingleOnCloudinary(req.file.path,"categories");
-            thumbnailUrl = result?.url || "";
-        }
-
-        console.log("The thumbnailUrl result is: ", thumbnailUrl);
-
-        // Update the category with the provided fields
-        const updateData = {
-            ...parseBody.data,
-            ...(generatedValue && { value: generatedValue }),
-        };
-
-        // If a new image was uploaded, include the new thumbnail URL in the update data
-        if (thumbnailUrl) {
-            updateData.thumbnail = thumbnailUrl;
-        }
-
-        const category = await Category.findByIdAndUpdate(id, updateData, {
-            new: true,
-        });
-
-        console.log("the updated category:", category);
-
-        // If category is not found, throw a NOT_FOUND error
-        if (!category) {
+        // Find the existing category
+        const existingCategory = await Category.findById(categoryId);
+        if (!existingCategory) {
+            deleteLocalFiles(file?.path);
             throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
         }
 
-        return category;
+        // Check if the title already exists in another category
+        if (title) {
+            const duplicateCategory = await Category.findOne({
+                title,
+                _id: { $ne: categoryId }, // Exclude current category
+            });
+
+            if (duplicateCategory) {
+                deleteLocalFiles(file?.path);
+                throw new ApiError(
+                    StatusCodes.CONFLICT,
+                    "A category with this title already exists"
+                );
+            }
+
+            // Generate `value` from `title`
+            updateData.value = title.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+        }
+
+        // Handle image update
+        if (file) {
+            // Delete old image from Cloudinary
+            if (existingCategory.thumbnail) {
+                const publicId = extractCloudinaryPublicId(existingCategory.thumbnail);
+                await deleteFromCloudinary(publicId);
+            }
+
+            // Upload new thumbnail
+            const result = await uploadSingleOnCloudinary(file.path, "categories");
+            if (result?.url) updateData.thumbnail = result.url;
+        }
+
+        // Update the category
+        const updatedCategory = await Category.findByIdAndUpdate(categoryId, updateData, { new: true });
+        if (!updatedCategory)
+            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+
+        return updatedCategory;
     } catch (error) {
+        console.log("UpdateCategory Error: ", error);
+
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
@@ -182,10 +194,12 @@ const getAllCategory = async (req: Request) => {
 };
 
 // Function to get a single category by ID
-const getSingleCategory = async (id: string) => {
+const getCategoryById = async (req: Request) => {
     try {
+        const { categoryId } = req.params;
+
         // Retrieve the category with the specified ID from the database
-        const category = await Category.findById(id);
+        const category = await Category.findById(categoryId);
 
         // If the category is not found, throw a NOT_FOUND error
         if (!category) {
@@ -289,5 +303,5 @@ export const CategoryService = {
     updateCategory,
     getAllCategory,
     deleteCategory,
-    getSingleCategory,
+    getCategoryById,
 };

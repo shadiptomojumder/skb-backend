@@ -24,7 +24,7 @@ export const uploadSingleOnCloudinary = async (
             localFilePath,
             {
                 resource_type: "auto",
-                folder: folderName || "products", // Use provided folderName or default,
+                folder: folderName || "others", // Use provided folderName or default,
             }
         );
 
@@ -68,7 +68,7 @@ export const uploadMultipleOnCloudinary = async (
         const uploadPromises = localFilePaths.map(async (filePath) => {
             const response = await cloudinary.uploader.upload(filePath, {
                 resource_type: "auto",
-                folder: folderName || "products", // Use provided folderName or default,
+                folder: folderName || "others", // Use provided folderName or default,
             });
             return { url: response.secure_url, public_id: response.public_id };
         });

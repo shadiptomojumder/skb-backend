@@ -11,10 +11,10 @@ router.post("",upload.single("thumbnail"), categoriesController.createCategory);
 router.get("", categoriesController.getAllCategory);
 
 // Get a specific category by ID
-router.get("/:id", categoriesController.getCategoryById);
+router.get("/:categoryId", categoriesController.getCategoryById);
 
 // Update a category (thumbnail update is optional)
-router.patch("/:id",upload.single("thumbnail"), categoriesController.updateCategory);
+router.patch("/:categoryId",upload.single("thumbnail"), categoriesController.updateCategory);
 
 // Delete a single or multiple categories
 router.delete("/:id?", categoriesController.deleteCategory);

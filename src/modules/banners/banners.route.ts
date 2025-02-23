@@ -5,7 +5,7 @@ import { bannersController } from "./banners.controller";
 const router = express.Router();
 
 // Create a new banner
-router.post("",upload.single("thumbnail"), bannersController.createCategory);
+router.post("",upload.single("image"), bannersController.createBanner);
 
 // Get all categories
 router.get("", bannersController.getAllCategory);
@@ -19,4 +19,4 @@ router.patch("/:id",upload.single("thumbnail"), bannersController.updateCategory
 // Delete a category by ID
 router.delete("/:id?", bannersController.deleteCategory);
 
-export const bannerRoutes:Router = router;
+export const BannerRoutes:Router = router;

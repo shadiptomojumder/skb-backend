@@ -4,15 +4,15 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CategoryService } from "./banners.services";
 
-// Controller function to create a new category
-const createCategory = asyncErrorHandler(
+// Controller function to create a new Banner
+const createBanner = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.createCategory(req);
+        const result = await CategoryService.createBanner(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category created",
-            data: category,
+            message: "Banner Successfully Created",
+            data: result,
         });
     }
 );
@@ -71,7 +71,7 @@ const singleCategory = asyncErrorHandler(
 );
 
 export const bannersController = {
-    createCategory,
+    createBanner,
     updateCategory,
     getAllCategory,
     deleteCategory,

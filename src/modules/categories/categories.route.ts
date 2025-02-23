@@ -11,7 +11,7 @@ router.post("",upload.single("thumbnail"), categoriesController.createCategory);
 router.get("", categoriesController.getAllCategory);
 
 // Get a specific category by ID
-router.get("/:id", categoriesController.singleCategory);
+router.get("/:id", categoriesController.getCategoryById);
 
 // Update a category (thumbnail update is optional)
 router.patch("/:id",upload.single("thumbnail"), categoriesController.updateCategory);

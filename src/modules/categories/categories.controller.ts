@@ -7,12 +7,12 @@ import { CategoryService } from "./categories.services";
 // Controller function to create a new category
 const createCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.createCategory(req);
+        const result = await CategoryService.createCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category created",
-            data: category,
+            message: "Category created successfully",
+            data: result,
         });
     }
 );
@@ -20,12 +20,12 @@ const createCategory = asyncErrorHandler(
 // Controller function to update an existing category
 const updateCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.updateCategory(req);
+        const result = await CategoryService.updateCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category successfully updated",
-            data: category,
+            message: "Category updated successfully",
+            data: result,
         });
     }
 );
@@ -33,12 +33,12 @@ const updateCategory = asyncErrorHandler(
 // Controller function to get all categories
 const getAllCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.getAllCategory(req);
+        const result = await CategoryService.getAllCategory(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "All category fetched",
-            data: category,
+            message: "Categories retrieved successfully",
+            data: result,
         });
     }
 );
@@ -57,15 +57,15 @@ const deleteCategory = asyncErrorHandler(
 );
 
 // Controller function to delete a category by ID
-const singleCategory = asyncErrorHandler(
+const getCategoryById = asyncErrorHandler(
     async (req: Request, res: Response) => {
         const id = req.params.id;
-        const category = await CategoryService.getSingleCategory(id);
+        const result = await CategoryService.getSingleCategory(id);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category update successfully",
-            data: category,
+            message: "Category details retrieved successfully",
+            data: result,
         });
     }
 );
@@ -75,5 +75,5 @@ export const categoriesController = {
     updateCategory,
     getAllCategory,
     deleteCategory,
-    singleCategory,
+    getCategoryById,
 };

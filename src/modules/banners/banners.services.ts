@@ -9,9 +9,8 @@ import ApiError from "../../errors/ApiError";
 
 import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 import Category from "../categories/categories.models";
-import { categoryUpdateSchema } from "../categories/categories.schemas";
 import Banner from "./banners.models";
-import { bannerSchema } from "./banners.schemas";
+import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
 
 // Function to create a new category
 const createBanner = async (req: Request) => {
@@ -82,68 +81,68 @@ const createBanner = async (req: Request) => {
 };
 
 // Function to update an existing category
-const updateCategory = async (req: Request) => {
+const updateBanner = async (req: Request) => {
     try {
-        // Category Id
-        const { id } = req.params;
+        // Banner Id
+        const { bannerId } = req.params;
 
         // Validate the request body against the category update schema
-        const parseBody = categoryUpdateSchema.safeParse(req.body);
+        const parseBody = bannerUpdateSchema.safeParse(req.body);
+
+        const file = req.file as Express.Multer.File;
 
         // If validation fails, collect error messages and throw a BAD_REQUEST error
         if (!parseBody.success) {
             const errorMessages = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
+                deleteLocalFiles(file.path);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        // Generate a unique `value` from `title` if title is updated
-        let generatedValue;
-        if (parseBody.data.title) {
-            generatedValue = parseBody.data.title
-                .toLowerCase()
-                .replace(/\s+/g, "_") // Convert spaces to underscores
-                .replace(/[^a-z0-9_]/g, ""); // Remove special characters
-        }
-
-        // Upload the thumbnail image to Cloudinary
-        let thumbnailUrl = "";
-
-        if (req.file) {
-            const result = await uploadSingleOnCloudinary(
-                req.file.path,
-                "categories"
-            );
-            thumbnailUrl = result?.url || "";
-        }
-
-        console.log("The thumbnailUrl result is: ", thumbnailUrl);
-
-        // Update the category with the provided fields
-        const updateData = {
-            ...parseBody.data,
-            ...(generatedValue && { value: generatedValue }),
-        };
-
-        // If a new image was uploaded, include the new thumbnail URL in the update data
-        if (thumbnailUrl) {
-            updateData.thumbnail = thumbnailUrl;
-        }
-
-        const category = await Category.findByIdAndUpdate(id, updateData, {
-            new: true,
+        // Check if a Banner with the same title or id already exists
+        const existingBanner = await Banner.findOne({
+            title: parseBody.data.title,
+            _id: { $ne: bannerId },
         });
-
-        console.log("the updated category:", category);
-
-        // If category is not found, throw a NOT_FOUND error
-        if (!category) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+        if (existingBanner) {
+            // Delete the locally stored file before throwing an error
+            deleteLocalFiles(file.path);
+            throw new ApiError(
+                StatusCodes.CONFLICT,
+                "Banner with this title already exists"
+            );
         }
 
-        return category;
+        // Find and update banner (without modifying image)
+        const banner = await Banner.findByIdAndUpdate(
+            bannerId,
+            parseBody.data,
+            { new: true }
+        );
+        if (!banner) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
+        }
+
+          // If an image is uploaded, update the image field
+        let imageUrl = "";
+        if (file) {
+            const result = await uploadSingleOnCloudinary(file.path, "banners");
+            imageUrl = result?.secure_url;
+        }
+
+        // Update the banner if new image is provided
+        banner.image = imageUrl;
+        await banner.save();
+
+        console.log("The category imageUrl is: ", imageUrl);
+
+        console.log("the updated banner:", banner);
+
+        return banner;
     } catch (error) {
+        console.log("Update Banner Error: ", error);
+
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
@@ -279,7 +278,7 @@ const deleteCategory = async (req: Request) => {
 
 export const CategoryService = {
     createBanner,
-    updateCategory,
+    updateBanner,
     getAllCategory,
     deleteCategory,
     getSingleCategory,

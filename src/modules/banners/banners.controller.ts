@@ -18,14 +18,14 @@ const createBanner = asyncErrorHandler(
 );
 
 // Controller function to update an existing category
-const updateCategory = asyncErrorHandler(
+const updateBanner = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.updateCategory(req);
+        const result = await CategoryService.updateBanner(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category successfully updated",
-            data: category,
+            message: "Banner successfully updated",
+            data: result,
         });
     }
 );
@@ -72,7 +72,7 @@ const singleCategory = asyncErrorHandler(
 
 export const bannersController = {
     createBanner,
-    updateCategory,
+    updateBanner,
     getAllCategory,
     deleteCategory,
     singleCategory,

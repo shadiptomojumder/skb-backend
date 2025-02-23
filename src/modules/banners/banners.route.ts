@@ -4,10 +4,10 @@ import { bannersController } from "./banners.controller";
 
 const router = express.Router();
 
-// Create a new banner
+// Create a new banner with an image upload
 router.post("", upload.single("image"), bannersController.createBanner);
 
-// Update a Banner
+// Update an existing banner (image update is optional)
 router.patch(
     "/:bannerId",
     upload.single("image"),
@@ -17,10 +17,10 @@ router.patch(
 // Get all Banners
 router.get("", bannersController.getAllBanners);
 
-// Get Banner by Id
+// Get a specific banner by ID
 router.get("/:bannerId", bannersController.getBannerById);
 
-// Delete Banners
+// Delete a single or multiple banners
 router.delete("/:bannerId?", bannersController.deleteBanners);
 
 export const BannerRoutes: Router = router;

@@ -12,13 +12,13 @@ import Category from "../categories/categories.models";
 import Banner from "./banners.models";
 import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
 
-// Function to create a new category
+// Function to create a new Banner
 const createBanner = async (req: Request) => {
     try {
-        // Validate the request body against the category schema
+        // Validate the request body against the Banner schema
         const parseBody = bannerSchema.safeParse(req.body);
         const file = req.file as Express.Multer.File;
-        // Check if the category image is provided
+        // Check if the Banner image is provided
         if (!file) {
             throw new ApiError(
                 StatusCodes.BAD_REQUEST,
@@ -35,7 +35,7 @@ const createBanner = async (req: Request) => {
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        // Check if a category with the same title or value already exists
+        // Check if a Banner with the same title already exists
         const existingBanner = await Banner.findOne({
             title: parseBody.data.title,
         });
@@ -56,7 +56,7 @@ const createBanner = async (req: Request) => {
             imageUrl = result?.secure_url || "";
         }
 
-        console.log("The category imageUrl is: ", imageUrl);
+        // console.log("The Banner imageUrl is: ", imageUrl);
 
         // Create a new Banner in the database
         const banner = new Banner({
@@ -80,13 +80,13 @@ const createBanner = async (req: Request) => {
     }
 };
 
-// Function to update an existing category
+// Function to update an existing Banner
 const updateBanner = async (req: Request) => {
     try {
         // Banner Id
         const { bannerId } = req.params;
 
-        // Validate the request body against the category update schema
+        // Validate the request body against the Banner update schema
         const parseBody = bannerUpdateSchema.safeParse(req.body);
 
         const file = req.file as Express.Multer.File;
@@ -135,9 +135,8 @@ const updateBanner = async (req: Request) => {
         banner.image = imageUrl;
         await banner.save();
 
-        console.log("The category imageUrl is: ", imageUrl);
-
-        console.log("the updated banner:", banner);
+        // console.log("The banner imageUrl is: ", imageUrl);
+        // console.log("the updated banner:", banner);
 
         return banner;
     } catch (error) {
@@ -151,19 +150,19 @@ const updateBanner = async (req: Request) => {
     }
 };
 
-// Function to get all categories
-const getAllCategory = async (req: Request) => {
+// Function to get all banners
+const getAllBanner = async (req: Request) => {
     try {
-        // Retrieve all categories with all fields from the database
-        const categories = await Category.find();
-        if (!categories) {
+        // Retrieve all banners with all fields from the database
+        const banners = await Banner.find();
+        if (!banners) {
             throw new ApiError(
                 StatusCodes.BAD_REQUEST,
-                "categories not found!!"
+                "banners not found!!"
             );
         }
 
-        return categories;
+        return banners;
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
@@ -279,7 +278,7 @@ const deleteCategory = async (req: Request) => {
 export const CategoryService = {
     createBanner,
     updateBanner,
-    getAllCategory,
+    getAllBanner,
     deleteCategory,
     getSingleCategory,
 };

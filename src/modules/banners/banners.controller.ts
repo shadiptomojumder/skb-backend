@@ -31,14 +31,14 @@ const updateBanner = asyncErrorHandler(
 );
 
 // Controller function to get all categories
-const getAllCategory = asyncErrorHandler(
+const getAllBanner = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const category = await CategoryService.getAllCategory(req);
+        const result = await CategoryService.getAllBanner(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "All category fetched",
-            data: category,
+            message: "All Banners fetched",
+            data: result,
         });
     }
 );
@@ -73,7 +73,7 @@ const singleCategory = asyncErrorHandler(
 export const bannersController = {
     createBanner,
     updateBanner,
-    getAllCategory,
+    getAllBanner,
     deleteCategory,
     singleCategory,
 };

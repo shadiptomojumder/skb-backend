@@ -7,15 +7,15 @@ const router = express.Router();
 // Create a new banner
 router.post("", upload.single("image"), bannersController.createBanner);
 
-// Update a category
+// Update a Banner
 router.patch(
     "/:bannerId",
     upload.single("image"),
     bannersController.updateBanner
 );
 
-// Get all categories
-router.get("", bannersController.getAllCategory);
+// Get all Banners
+router.get("", bannersController.getAllBanner);
 
 // Get category by Id
 router.get("/:id", bannersController.singleCategory);

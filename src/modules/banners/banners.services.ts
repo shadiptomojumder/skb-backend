@@ -8,6 +8,7 @@ import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
 
 import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
+import mongoose from "mongoose";
 import Category from "../categories/categories.models";
 import Banner from "./banners.models";
 import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
@@ -96,7 +97,7 @@ const updateBanner = async (req: Request) => {
             const errorMessages = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
-                deleteLocalFiles(file.path);
+            deleteLocalFiles(file.path);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
@@ -124,7 +125,7 @@ const updateBanner = async (req: Request) => {
             throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
         }
 
-          // If an image is uploaded, update the image field
+        // If an image is uploaded, update the image field
         let imageUrl = "";
         if (file) {
             const result = await uploadSingleOnCloudinary(file.path, "banners");
@@ -151,15 +152,12 @@ const updateBanner = async (req: Request) => {
 };
 
 // Function to get all banners
-const getAllBanner = async (req: Request) => {
+const getAllBanners = async (req: Request) => {
     try {
         // Retrieve all banners with all fields from the database
         const banners = await Banner.find();
         if (!banners) {
-            throw new ApiError(
-                StatusCodes.BAD_REQUEST,
-                "banners not found!!"
-            );
+            throw new ApiError(StatusCodes.BAD_REQUEST, "banners not found!!");
         }
 
         return banners;
@@ -172,19 +170,29 @@ const getAllBanner = async (req: Request) => {
     }
 };
 
-// Function to get a single category by ID
-const getSingleCategory = async (id: string) => {
+// Function to get a single banner by ID
+const getBannerById = async (req: Request) => {
     try {
-        // Retrieve the category with the specified ID from the database
-        const category = await Category.findById(id);
+        // Banner Id
+        const { bannerId } = req.params;
 
-        // If the category is not found, throw a NOT_FOUND error
-        if (!category) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+        // ✅ Check if bannerId is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(bannerId)) {
+            throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid banner ID");
         }
 
-        return category;
+        // Retrieve the banner with the specified ID from the database
+        const banner = await Banner.findById(bannerId);
+
+        // If the banner is not found, throw a NOT_FOUND error
+        if (!banner) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
+        }
+
+        return banner;
     } catch (error) {
+        console.log("GetBannerById Error:", error);
+
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
@@ -193,7 +201,7 @@ const getSingleCategory = async (id: string) => {
     }
 };
 
-// Function to delete a category by ID
+// Function to delete a banner by ID
 const deleteCategory = async (req: Request) => {
     try {
         const { id } = req.params;
@@ -275,10 +283,10 @@ const deleteCategory = async (req: Request) => {
     }
 };
 
-export const CategoryService = {
+export const BannerService = {
     createBanner,
     updateBanner,
-    getAllBanner,
+    getAllBanners,
     deleteCategory,
-    getSingleCategory,
+    getBannerById,
 };

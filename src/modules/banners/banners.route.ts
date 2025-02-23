@@ -15,10 +15,10 @@ router.patch(
 );
 
 // Get all Banners
-router.get("", bannersController.getAllBanner);
+router.get("", bannersController.getAllBanners);
 
-// Get category by Id
-router.get("/:id", bannersController.singleCategory);
+// Get Banner by Id
+router.get("/:bannerId", bannersController.getBannerById);
 
 // Delete a category by ID
 router.delete("/:id?", bannersController.deleteCategory);

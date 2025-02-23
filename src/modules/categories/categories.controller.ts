@@ -64,7 +64,7 @@ const singleCategory = asyncErrorHandler(
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: "Category update successfully",
+            message: "Category Found",
             data: category,
         });
     }

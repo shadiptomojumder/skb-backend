@@ -20,7 +20,7 @@ router.get("", bannersController.getAllBanners);
 // Get Banner by Id
 router.get("/:bannerId", bannersController.getBannerById);
 
-// Delete a category by ID
-router.delete("/:id?", bannersController.deleteCategory);
+// Delete Banners
+router.delete("/:bannerId?", bannersController.deleteBanners);
 
 export const BannerRoutes: Router = router;

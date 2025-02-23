@@ -38,9 +38,9 @@ const getAllBanners = asyncErrorHandler(async (req: Request, res: Response) => {
 });
 
 // Controller function to delete a category by ID
-const deleteCategory = asyncErrorHandler(
+const deleteBanners = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const result = await BannerService.deleteCategory(req);
+        const result = await BannerService.deleteBanners(req);
 
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
@@ -65,6 +65,6 @@ export const bannersController = {
     createBanner,
     updateBanner,
     getAllBanners,
-    deleteCategory,
+    deleteBanners,
     getBannerById,
 };

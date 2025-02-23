@@ -9,7 +9,6 @@ import ApiError from "../../errors/ApiError";
 
 import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 import mongoose from "mongoose";
-import Category from "../categories/categories.models";
 import Banner from "./banners.models";
 import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
 
@@ -202,34 +201,34 @@ const getBannerById = async (req: Request) => {
 };
 
 // Function to delete a banner by ID
-const deleteCategory = async (req: Request) => {
+const deleteBanners = async (req: Request) => {
     try {
-        const { id } = req.params;
+        const { bannerId } = req.params;
         const { ids } = req.body;
 
-        if (id) {
-            // Find the category to get the thumbnail (if exists)
-            const category = await Category.findById(id);
-            if (!category) {
-                throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+        if (bannerId) {
+            // Find the Banner to get the image (if exists)
+            const banner = await Banner.findById(bannerId);
+            if (!banner) {
+                throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
             }
 
-            // First, delete the category from the database
-            const deletedCategory = await Category.findByIdAndDelete(id);
-            if (!deletedCategory) {
+            // First, delete the Banner from the database
+            const deletedBanner = await Banner.findByIdAndDelete(bannerId);
+            if (!deletedBanner) {
                 throw new ApiError(
                     StatusCodes.INTERNAL_SERVER_ERROR,
-                    "Failed to delete category"
+                    "Failed to delete Banner from database"
                 );
             }
 
-            // Delete image from Cloudinary if the category has a thumbnail
-            if (category.thumbnail) {
-                const publicId = extractCloudinaryPublicId(category.thumbnail);
+            // Delete image from Cloudinary if the banner has a image
+            if (banner.image) {
+                const publicId = extractCloudinaryPublicId(banner.image);
                 await deleteFromCloudinary(publicId);
             }
 
-            return { message: "Category deleted successfully" };
+            return { message: "Banner deleted successfully" };
         } else if (ids && Array.isArray(ids)) {
             // Validate that 'ids' is an array and contains valid values
             if (!Array.isArray(ids) || ids.length === 0) {
@@ -239,37 +238,44 @@ const deleteCategory = async (req: Request) => {
                 );
             }
 
-            // Fetch all categories to ensure they exist
-            const existingCategories = await Category.find({
+            // Fetch all banners to ensure they exist
+            const existingBanners = await Banner.find({
                 _id: { $in: ids },
             });
-            if (existingCategories.length !== ids.length) {
+            if (existingBanners.length !== ids.length) {
                 throw new ApiError(
                     StatusCodes.NOT_FOUND,
-                    "One or more category IDs do not exist"
+                    "One or more banner IDs do not exist"
                 );
             }
 
-            // Delete categories from database first
-            const result = await Category.deleteMany({ _id: { $in: ids } });
+            // Delete banners from database first
+            const result = await Banner.deleteMany({ _id: { $in: ids } });
+            console.log("The delete result is:", result);
             if (result.deletedCount !== ids.length) {
                 throw new ApiError(
-                    StatusCodes.INTERNAL_SERVER_ERROR,
-                    "Some categories could not be deleted"
+                    StatusCodes.BAD_REQUEST,
+                    "Some banners could not be deleted"
                 );
             }
+            console.log("The delete result is:", result);
 
-            // If successful, delete associated images
-            for (const category of existingCategories) {
-                if (category.thumbnail) {
-                    const publicId = extractCloudinaryPublicId(
-                        category.thumbnail
-                    );
-                    await deleteFromCloudinary(publicId);
-                }
-            }
+            console.log("The existingBanners is:", existingBanners);
+
+            // ✅ Delete associated images from Cloudinary
+            await Promise.all(
+                existingBanners.map(async (banner) => {
+                    if (banner.image) {
+                        const publicId = extractCloudinaryPublicId(
+                            banner.image
+                        );
+                        await deleteFromCloudinary(publicId);
+                    }
+                })
+            );
+
             return {
-                message: `${result.deletedCount} categories deleted successfully`,
+                message: `${result.deletedCount} banners deleted successfully`,
             };
         } else {
             throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid request");
@@ -287,6 +293,6 @@ export const BannerService = {
     createBanner,
     updateBanner,
     getAllBanners,
-    deleteCategory,
+    deleteBanners,
     getBannerById,
 };

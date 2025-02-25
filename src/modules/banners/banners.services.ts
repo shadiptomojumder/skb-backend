@@ -1,72 +1,29 @@
-import {
+import cloudinary, {
     deleteFromCloudinary,
-    uploadSingleOnCloudinary,
+    uploadMultipleOnCloudinary,
 } from "@/shared/cloudinary";
 import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import ApiError from "../../errors/ApiError";
 
-import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 import mongoose from "mongoose";
-import Banner from "./banners.models";
-import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
+import { Banner } from "./banners.models";
+import { bannerUpdateSchema } from "./banners.schemas";
 
 // Function to create a new Banner
 const createBanner = async (req: Request) => {
     try {
-        // Validate the request body against the Banner schema
-        const parseBody = bannerSchema.safeParse(req.body);
-        const file = req.file as Express.Multer.File;
-        // Check if the Banner image is provided
-        if (!file) {
-            throw new ApiError(
-                StatusCodes.BAD_REQUEST,
-                "Banner must have an image."
-            );
-        }
-
-        // If validation fails, collect error messages and throw a BAD_REQUEST error
-        if (!parseBody.success) {
-            const errorMessages: string = parseBody.error.errors
-                .map((error) => error.message)
-                .join(",");
-            deleteLocalFiles(file.path);
-            throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
-        }
-
-        // Check if a Banner with the same title already exists
-        const existingBanner = await Banner.findOne({
-            title: parseBody.data.title,
-        });
-        if (existingBanner) {
-            // Delete the locally stored file before throwing an error
-            deleteLocalFiles(file.path);
-            throw new ApiError(
-                StatusCodes.CONFLICT,
-                "Banner with this title already exists"
-            );
-        }
-
-        // Upload the thumbnail image to Cloudinary
-        let imageUrl = "";
-
-        if (req.file) {
-            const result = await uploadSingleOnCloudinary(file.path, "banners");
-            imageUrl = result?.secure_url || "";
-        }
-
-        // console.log("The Banner imageUrl is: ", imageUrl);
+        // Determine the order for the new banner (last in sequence)
+        const lastBanner = await Banner.findOne().sort({ order: -1 });
+        const newOrder = lastBanner ? lastBanner.order + 1 : 1;
 
         // Create a new Banner in the database
-        const banner = new Banner({
-            ...parseBody.data,
-            image: imageUrl,
+        const banner = await Banner.create({
+            title: `Banner #${newOrder}`,
+            image: "",
+            order: newOrder,
         });
-
-        console.log("The created Banner", banner);
-
-        await banner.save();
 
         return banner;
     } catch (error) {
@@ -89,56 +46,27 @@ const updateBanner = async (req: Request) => {
         // Validate the request body against the Banner update schema
         const parseBody = bannerUpdateSchema.safeParse(req.body);
 
-        const file = req.file as Express.Multer.File;
-
         // If validation fails, collect error messages and throw a BAD_REQUEST error
         if (!parseBody.success) {
             const errorMessages = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
-            deleteLocalFiles(file.path);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        // Check if a Banner with the same title or id already exists
-        const existingBanner = await Banner.findOne({
-            title: parseBody.data.title,
-            _id: { $ne: bannerId },
-        });
-        if (existingBanner) {
-            // Delete the locally stored file before throwing an error
-            deleteLocalFiles(file.path);
-            throw new ApiError(
-                StatusCodes.CONFLICT,
-                "Banner with this title already exists"
-            );
-        }
-
-        // Find and update banner (without modifying image)
-        const banner = await Banner.findByIdAndUpdate(
-            bannerId,
-            parseBody.data,
-            { new: true }
-        );
-        if (!banner) {
+        // Find the existing category
+        const existingBanner = await Banner.findById(bannerId);
+        if (!existingBanner) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
         }
 
-        // If an image is uploaded, update the image field
-        let imageUrl = "";
-        if (file) {
-            const result = await uploadSingleOnCloudinary(file.path, "banners");
-            imageUrl = result?.secure_url;
-        }
+        // Update the banner with the provided data
+        const updatedBanner = await Banner.findByIdAndUpdate(bannerId, {
+            image: parseBody.data.image,
+            isActive: parseBody.data.isActive,
+        });
 
-        // Update the banner if new image is provided
-        banner.image = imageUrl;
-        await banner.save();
-
-        // console.log("The banner imageUrl is: ", imageUrl);
-        // console.log("the updated banner:", banner);
-
-        return banner;
+        return updatedBanner;
     } catch (error) {
         console.log("Update Banner Error: ", error);
 
@@ -289,10 +217,72 @@ const deleteBanners = async (req: Request) => {
     }
 };
 
+// Function to create a new product
+const uploadBannerImages = async (req: Request) => {
+    try {
+        // If user dont send any image then show an error
+        if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "At least one image is required to create a product."
+            );
+        }
+
+        // Generate an array of strings for file path
+        const filePaths = (req.files as Express.Multer.File[]).map(
+            (file) => file.path
+        );
+
+        // Upload images to Cloudinary
+        const uploadResults = await uploadMultipleOnCloudinary(
+            filePaths,
+            "banners"
+        );
+
+        // Transform it into an array of URLs
+        const imageUrls = uploadResults.map((image) => image.url);
+        console.log("The imageUrls  is:", imageUrls);
+
+        return imageUrls;
+    } catch (error) {
+        console.error("Error in createProduct:", error);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
+    }
+};
+
+const getBannerImages = async () => {
+    try {
+        const result = await cloudinary.api.resources({
+            type: "upload",
+            prefix: "banners/", // Fetch only images from 'banners' folder
+            resource_type: "image", // Ensure only images are retrieved
+            max_results: 50, // Limit number of images
+        });
+
+        console.log("The result is:", result);
+
+        return result.resources.map(
+            (file: { secure_url: string; public_id: string }) => ({
+                imageURL: file.secure_url,
+                public_id: file.public_id,
+            })
+        );
+    } catch (error) {
+        console.error("Error fetching banner images:", error);
+        throw new Error("Failed to fetch images from Cloudinary");
+    }
+};
+
 export const BannerService = {
     createBanner,
     updateBanner,
     getAllBanners,
     deleteBanners,
     getBannerById,
+    uploadBannerImages,
+    getBannerImages,
 };

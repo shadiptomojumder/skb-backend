@@ -61,10 +61,34 @@ const getBannerById = asyncErrorHandler(async (req: Request, res: Response) => {
     });
 });
 
+// Controller function to upload Banner Images
+const uploadBannerImages = asyncErrorHandler(async (req: Request, res: Response) => {
+    const result = await BannerService.uploadBannerImages(req);
+    ApiResponse(res, {
+        statusCode: StatusCodes.OK,
+        success: true,
+        message: "Images uploaded successfully.",
+        data: result,
+    });
+});
+
+// Controller function to upload Banner Images
+const getBannerImages = asyncErrorHandler(async (req: Request, res: Response) => {
+    const result = await BannerService.getBannerImages();
+    ApiResponse(res, {
+        statusCode: StatusCodes.OK,
+        success: true,
+        message: "Images fetched successfully.",
+        data: result,
+    });
+});
+
 export const bannersController = {
     createBanner,
     updateBanner,
     getAllBanners,
     deleteBanners,
     getBannerById,
+    uploadBannerImages,
+    getBannerImages
 };

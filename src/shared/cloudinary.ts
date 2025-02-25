@@ -156,3 +156,4 @@ export const deleteFromCloudinary = async (
     }
 };
 
+export default cloudinary; // ✅ Export the configured instance

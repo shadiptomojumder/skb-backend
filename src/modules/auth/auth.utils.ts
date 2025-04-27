@@ -1,10 +1,24 @@
 import config from "@/config";
-import * as bcrypt from "bcrypt";
 import jwt, { JwtPayload, Secret, SignOptions } from "jsonwebtoken";
 import { BlacklistedToken } from "./auth.model";
 
+import bcrypt from "bcryptjs";
+
+// Function to convert plain text password to hashed password
+export const hashedPassword = async (password: string): Promise<string> => {
+    const saltRounds = 10;
+    try {
+        const salt = await bcrypt.genSalt(saltRounds);
+        const hashed = await bcrypt.hash(password, salt);
+        return hashed;
+    } catch (error) {
+        throw new Error("Error hashing password");
+    }
+};
+
+
 // Function to compare plain text password with hashed password
-const comparePasswords = async (
+export const comparePasswords = async (
     plainTextPassword: string,
     hashedPassword: string
 ): Promise<boolean> => {
@@ -15,7 +29,7 @@ const comparePasswords = async (
         );
         return match;
     } catch (error) {
-        throw new Error("Error comparing passwords");
+        throw new Error("Error while comparing passwords");
     }
 };
 

@@ -1,13 +1,10 @@
 import { loginDataSchema, signupDataSchema } from "@/auth/auth.schemas";
-import config from "@/config";
 import ApiError from "@/errors/ApiError";
-import { hashedPassword } from "@/helpers/hashPasswordHelper";
 import { normalizePhoneNumber } from "@/shared/normalizePhoneNumber";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
-import { Secret } from "jsonwebtoken";
 import { User } from "../user/user.model";
-import { AuthUtils } from "./auth.utils";
+import { AuthUtils, hashedPassword } from "./auth.utils";
 
 // Signup function to register a new user
 const signup = async (req: Request) => {
@@ -91,7 +88,9 @@ const login = async (req: Request) => {
         let isUserExist = await User.findOne(
             email ? { email } : { phone: normalizedPhone }
         )
-            .select("_id firstName lastName email phone address googleId role avatar password")
+            .select(
+                "_id firstName lastName email phone address googleId role avatar password"
+            )
             .lean();
 
         if (!isUserExist) {
@@ -114,23 +113,19 @@ const login = async (req: Request) => {
         // Generate JWT tokens
         let accessToken, refreshToken;
         try {
-            accessToken = AuthUtils.generateToken(
-                {
-                    id: isUserExist._id.toString(),
-                    email: isUserExist.email,
-                    role: isUserExist.role,
-                },
-            );
-            refreshToken = AuthUtils.generateToken(
-                {
-                    id: isUserExist._id.toString(),
-                    email: isUserExist.email,
-                    role: isUserExist.role,
-                },
-            );
+            accessToken = AuthUtils.generateToken({
+                id: isUserExist._id.toString(),
+                email: isUserExist.email,
+                role: isUserExist.role,
+            });
+            refreshToken = AuthUtils.generateToken({
+                id: isUserExist._id.toString(),
+                email: isUserExist.email,
+                role: isUserExist.role,
+            });
         } catch (error) {
             //console.log("The token error is:",error);
-            
+
             throw new ApiError(
                 StatusCodes.INTERNAL_SERVER_ERROR,
                 "Failed to generate authentication tokens"
@@ -140,8 +135,7 @@ const login = async (req: Request) => {
         // Save the refreshToken in the database
         await User.findByIdAndUpdate(isUserExist._id, { refreshToken });
 
-        console.log("The Exist User is:",isUserExist);
-        
+        console.log("The Exist User is:", isUserExist);
 
         // Prepare sanitized user object
         const sanitizedUser = {
@@ -154,7 +148,6 @@ const login = async (req: Request) => {
             ...(isUserExist.avatar && { avatar: isUserExist.avatar }),
             ...(isUserExist.address && { avatar: isUserExist.address }),
         };
-
 
         return {
             data: {

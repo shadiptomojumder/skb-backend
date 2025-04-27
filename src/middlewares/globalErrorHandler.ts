@@ -3,11 +3,10 @@ import { Error as MongooseError } from "mongoose";
 import { ZodError } from "zod";
 import config from "../config";
 import ApiError from "../errors/ApiError";
-import handleMongooseError from "../errors/handleClientError";
-import handleMongooseValidationError from "../errors/handleValidationError";
 import handleZodError from "../errors/handleZodError";
 import { IGenericErrorMessage } from "../interfaces/error";
 import { errorlogger } from "../shared/logger";
+import handleMongooseError from "@/errors/handleMongooseError";
 
 // Global error handler middleware
 const globalErrorHandler: ErrorRequestHandler = (
@@ -29,7 +28,7 @@ const globalErrorHandler: ErrorRequestHandler = (
 
     // Handle Mongoose validation errors
     if (error instanceof MongooseError.ValidationError) {
-        const simplifiedError = handleMongooseValidationError(error);
+        const simplifiedError = handleMongooseError(error);
         statusCode = simplifiedError.statusCode;
         message = simplifiedError.message;
         errorMessages = simplifiedError.errorMessages;
@@ -41,24 +40,17 @@ const globalErrorHandler: ErrorRequestHandler = (
         message = simplifiedError.message;
         errorMessages = simplifiedError.errorMessages;
     }
-    // Handle Mongoose cast errors
-    else if (error instanceof MongooseError.CastError) {
-        const simplifiedError = handleMongooseError(error);
-        statusCode = simplifiedError.statusCode;
-        message = simplifiedError.message;
-        errorMessages = simplifiedError.errorMessages;
-    }
     // Handle custom API errors
     else if (error instanceof ApiError) {
         statusCode = error?.statusCode ?? 500;
         message = error.message;
         errorMessages = error?.message
-            ? [
-                  {
-                      path: req.originalUrl,
-                      message: error?.message,
-                  },
-              ]
+            ?   [
+                    {
+                        path: req.originalUrl,
+                        message: error?.message,
+                    },
+                ]
             : [];
     }
     // Handle general and unexpected errors

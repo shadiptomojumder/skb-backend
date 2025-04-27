@@ -31,3 +31,17 @@ export const userSchema = z.object({
 
 // Update user schema by making all fields optional
 export const updateUserSchema = userSchema.partial().extend({});
+
+// User Interface
+export interface IUser {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string;
+    googleId: string;
+    role: string;
+    avatar: string;
+    otp: number;
+    refreshToken: string;
+}

@@ -7,12 +7,19 @@ const { combine, timestamp, label, printf } = format;
 //Customm Log Format
 
 const myFormat = printf(({ level, message, label, timestamp }) => {
-  const date = new Date(timestamp);
-  const hour = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
-  return `${date.toDateString()} ${hour}:${minutes}:${seconds} } [${label}] ${level}: ${message}`;
+  const date = new Date(timestamp as string); // Ensure timestamp is treated as a string
+  if (isNaN(date.getTime())) {
+    console.error("Invalid timestamp received:", timestamp);
+    return `${new Date().toDateString()} [${label}] ${level}: ${message}`; // Fallback to current date
+  }
+  
+  const hour = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const seconds = date.getSeconds().toString().padStart(2, "0");
+
+  return `${date.toDateString()} ${hour}:${minutes}:${seconds} [${label}] ${level}: ${message}`;
 });
+
 
 const logger = createLogger({
   level: 'info',

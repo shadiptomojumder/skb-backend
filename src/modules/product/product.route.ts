@@ -20,10 +20,10 @@ router.delete("/:productId/image", productController.deleteProductImage);
 router.get("", productController.getAllProduct);
 
 // Get a single product by ID
-router.get("/:id", productController.getSingleProduct);
+router.get("/:productId", productController.getProductById);
 
 // Delete a single product by ID
-router.delete("/:id?", productController.deleteProduct);
+router.delete("/:productId", productController.deleteProduct);
 
 
 

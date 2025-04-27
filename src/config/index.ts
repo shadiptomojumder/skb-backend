@@ -1,3 +1,4 @@
+import { StringValue } from '@/modules/auth/auth.utils';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -15,7 +16,7 @@ export default {
   allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [],
   jwt: {
     secret: process.env.JWT_SECRET,
-    expires_in: process.env.EXPIRES_IN,
+    expires_in: process.env.EXPIRES_IN as StringValue | number,
     refresh_secret: process.env.REFRESH_SECRET,
     refresh_expires_in: process.env.REFRESH_EXPIRES_IN,
     passwordResetTokenExpirationTime: process.env.PASS_RESET_EXPIRATION_TIME,

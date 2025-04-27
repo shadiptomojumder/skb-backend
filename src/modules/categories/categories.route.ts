@@ -5,7 +5,11 @@ import { upload } from "@/middlewares/multer.middleware";
 const router = express.Router();
 
 // Create a new category with an optional thumbnail upload
-router.post("",upload.single("thumbnail"), categoriesController.createCategory);
+// router.post("",upload.single("thumbnail"), categoriesController.createCategory);
+
+// Create a new category with optional thumbnail and logo uploads
+router.post("", upload.fields([{ name: "thumbnail", maxCount: 1 }, { name: "logo", maxCount: 1 }]), categoriesController.createCategory);
+
 
 // Get all categories
 router.get("", categoriesController.getAllCategory);
@@ -14,9 +18,12 @@ router.get("", categoriesController.getAllCategory);
 router.get("/:categoryId", categoriesController.getCategoryById);
 
 // Update a category (thumbnail update is optional)
-router.patch("/:categoryId",upload.single("thumbnail"), categoriesController.updateCategory);
+router.patch("/:categoryId",upload.fields([{ name: "thumbnail", maxCount: 1 }, { name: "logo", maxCount: 1 }]), categoriesController.updateCategory);
 
-// Delete a single or multiple categories
-router.delete("/:id?", categoriesController.deleteCategory);
+// Delete Single Category by ID
+router.delete("/:categoryId", categoriesController.deleteSingleCategory);
+
+// Delete Multiple Categories
+router.delete("", categoriesController.deleteMultipleCategories);
 
 export const CategoryRoutes:Router = router;

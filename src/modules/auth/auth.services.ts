@@ -2,6 +2,7 @@ import { loginDataSchema, signupDataSchema } from "@/auth/auth.schemas";
 import config from "@/config";
 import ApiError from "@/errors/ApiError";
 import { hashedPassword } from "@/helpers/hashPasswordHelper";
+import { normalizePhoneNumber } from "@/shared/normalizePhoneNumber";
 import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import { Secret } from "jsonwebtoken";
@@ -20,16 +21,20 @@ const signup = async (req: Request) => {
                 .join(",");
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
+        console.log("The parseBody is:", parseBody);
 
-        const { email, fullname, password } = parseBody.data;
+        const { email, phone, password } = parseBody.data;
 
-        // Check if a user with the same email or fullname already exists
-        const isUserExist = await User.findOne({
-            $or: [{ email }, { fullname }],
-        })
-            .select("-password -refreshToken -otp")
-            .lean()
-            .exec();
+        // Normalize the phone number
+        const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+        // Check if a user with the same email or phone already exists
+        let isUserExist;
+        if (email) {
+            isUserExist = await User.findOne({ email });
+        } else if (normalizedPhone) {
+            isUserExist = await User.findOne({ phone: normalizedPhone });
+        }
 
         // If user exists, throw a CONFLICT error
         if (isUserExist) {
@@ -40,18 +45,25 @@ const signup = async (req: Request) => {
         const hashPassword = await hashedPassword(password);
 
         // Create a new user in the database with the hashed password
-        const user = await User.create({
+        const result = await User.create({
             ...parseBody.data,
+            ...(normalizedPhone && { phone: normalizedPhone }),
             password: hashPassword,
         });
 
-        return user;
+        // Convert to plain object and remove sensitive fields
+        const userObj: Partial<typeof result> = result.toObject();
+        delete userObj.password;
+
+        return userObj;
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(
-          StatusCodes.INTERNAL_SERVER_ERROR,
-          "An unexpected error occurred"
-      );
+        console.log("Error creating user", error);
+
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 
@@ -69,67 +81,95 @@ const login = async (req: Request) => {
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        const { email, password } = parseBody.data;
-        // Check if a user with the provided email exists
-        const isUserExist = await User.findOne({ email })
-            .select("-password -refreshToken -otp")
-            .lean()
-            .exec();
+        const { email, phone } = parseBody.data;
 
-        // If user does not exist, throw a NOT_FOUND error
+        // Normalize the phone number
+        const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+        // Check if a user with the same email or phone already exists
+        // Check if user exists
+        let isUserExist = await User.findOne(
+            email ? { email } : { phone: normalizedPhone }
+        )
+            .select("_id firstName lastName email phone address googleId role avatar password")
+            .lean();
+
         if (!isUserExist) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "User does not exist");
+            throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
         }
+
         //console.log("isUserExist is:", isUserExist);
 
         // Compare the provided password with the hashed password stored in the database
-        if (
-            isUserExist.password &&
-            !(await AuthUtils.comparePasswords(
-                parseBody.data.password,
-                isUserExist.password
-            ))
-        ) {
-            throw new ApiError(
-                StatusCodes.UNAUTHORIZED,
-                "Password is incorrect"
-            );
+        // Verify password
+        const isPasswordValid = await AuthUtils.comparePasswords(
+            parseBody.data.password,
+            isUserExist.password
+        );
+        if (!isPasswordValid) {
+            throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid credentials");
         }
 
         // Generate JWT tokens for authentication and authorization
-        const { _id: userId, email: userEmail, role: userRole } = isUserExist;
+        // Generate JWT tokens
+        let accessToken, refreshToken;
+        try {
+            accessToken = AuthUtils.generateToken(
+                {
+                    id: isUserExist._id.toString(),
+                    email: isUserExist.email,
+                    role: isUserExist.role,
+                },
+            );
+            refreshToken = AuthUtils.generateToken(
+                {
+                    id: isUserExist._id.toString(),
+                    email: isUserExist.email,
+                    role: isUserExist.role,
+                },
+            );
+        } catch (error) {
+            //console.log("The token error is:",error);
+            
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "Failed to generate authentication tokens"
+            );
+        }
 
-        const accessToken = AuthUtils.generateToken(
-            { userId, userEmail, userRole },
-            config.jwt.secret as Secret,
-            config.jwt.expires_in as string
-        );
-        const refreshToken = AuthUtils.generateToken(
-            { userId, userEmail, userRole },
-            config.jwt.refresh_secret as Secret,
-            config.jwt.refresh_expires_in as string
-        );
+        // Save the refreshToken in the database
+        await User.findByIdAndUpdate(isUserExist._id, { refreshToken });
 
-        const updatedUser = await User.findByIdAndUpdate(
-            isUserExist._id, // Document ID
-            { refreshToken: refreshToken }, // Fields to update
-            { new: true, runValidators: true } // Options
-        );
+        console.log("The Exist User is:",isUserExist);
+        
+
+        // Prepare sanitized user object
+        const sanitizedUser = {
+            id: isUserExist._id,
+            firstName: isUserExist.firstName,
+            lastName: isUserExist.lastName,
+            email: isUserExist.email,
+            phone: isUserExist.phone,
+            role: isUserExist.role,
+            ...(isUserExist.avatar && { avatar: isUserExist.avatar }),
+            ...(isUserExist.address && { avatar: isUserExist.address }),
+        };
+
 
         return {
             data: {
-                user: {
-                    ...isUserExist,
-                },
+                user: sanitizedUser,
                 accessToken,
             },
         };
     } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw new ApiError(
-          StatusCodes.INTERNAL_SERVER_ERROR,
-          "An unexpected error occurred"
-      );
+        console.log("The Login service Error:", error);
+
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
     }
 };
 

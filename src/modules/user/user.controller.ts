@@ -44,7 +44,19 @@ const getAllUser = asyncErrorHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Controller function to update an User
+const updateUser = asyncErrorHandler(async (req: Request, res: Response) => {
+  const result = await UserServices.updateUser(req);
+  ApiResponse(res, {
+      statusCode: StatusCodes.OK,
+      success: true,
+      message: "User successfully updated",
+      data: result,
+  });
+});
+
 export const UserController = {
   getOneUser,
   getAllUser,
+  updateUser
 };

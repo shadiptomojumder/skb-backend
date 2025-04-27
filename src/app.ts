@@ -16,7 +16,7 @@ app.use(helmet());
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+    max: 1000, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
   })
 );
 
@@ -28,13 +28,25 @@ app.use(
 //   }),
 // );
 
-// Apply CORS configuration
-app.use(
-  cors({
-    origin: config.allowedOrigins,
-    credentials: true,
-  })
-);
+
+// interface CorsOptions {
+//   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
+//   credentials: boolean;
+// }
+
+// CORS configuration
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (config.allowedOrigins.includes(origin!) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 app.use(cookieParser());
 
@@ -51,6 +63,9 @@ app.get("/test", async (req: Request, res: Response) => {
     message: "Server working....!",
   });
 });
+app.get('/', (req, res) => {
+  res.send('Lalon Store Server is running..!')
+})
 
 // Global error handler middleware
 app.use(globalErrorHandler);

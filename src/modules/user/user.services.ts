@@ -2,9 +2,14 @@ import ApiError from "@/errors/ApiError";
 import { paginationHelpers } from "@/helpers/paginationHelper";
 import { IAuthUser, IGenericResponse } from "@/interfaces/common";
 import { IPaginationOptions } from "@/interfaces/pagination";
+import { normalizePhoneNumber } from "@/shared/normalizePhoneNumber";
+import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import { FilterQuery } from "mongoose";
 import { User } from "./user.model";
+import { updateUserSchema } from "./user.schemas";
+import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
+import { deleteFromCloudinary, uploadSingleOnCloudinary } from "@/shared/cloudinary";
 
 const getOneUser = async (userId: string) => {
     try {
@@ -97,7 +102,102 @@ const getAllUser = async (
     }
 };
 
+const updateUser = async (req: Request) => {
+    try {
+        // Product Id
+        const { userId } = req.params;
+        console.log("User Id: ", userId);
+        console.log("Request Body Is: ", req.body);
+        const file = req.file as Express.Multer.File;
+        
+
+        // Fetch user from the database to determine their signup method
+        const existingUser = await User.findById(userId);
+        if (!existingUser) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+        }
+
+        // Validate the request body against the product schema
+        const parseBody = updateUserSchema.safeParse(req.body);
+        console.log("The parseBody is:", parseBody);
+
+        // If validation fails, collect error messages and throw a BAD_REQUEST error
+        if (!parseBody.success) {
+            const errorMessages = parseBody.error.errors
+                .map((error) => error.message)
+                .join(",");
+            throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
+        }
+
+        // Allowed fields for update
+        const allowedFields = [
+            "avatar",
+            "phone",
+            "email",
+            "address",
+            "firstName",
+            "lastName",
+            "role",
+        ];
+
+        // Filter out unwanted fields
+        const updateData: Record<string, any> = {};
+        Object.keys(req.body).forEach((key) => {
+            if (allowedFields.includes(key)) {
+                updateData[key] = req.body[key];
+            }
+        });
+
+        // Prevent changing the signup field
+        if (existingUser.email && updateData.email) {
+            throw new ApiError(
+                StatusCodes.FORBIDDEN,
+                "You cannot change your registered email"
+            );
+        }
+        if (existingUser.phone && updateData.phone) {
+            throw new ApiError(
+                StatusCodes.FORBIDDEN,
+                "You cannot change your registered phone number"
+            );
+        }
+
+        // Normalize phone number if provided
+        if (updateData.phone) {
+            updateData.phone = normalizePhoneNumber(updateData.phone);
+        }
+
+        // Handle image update
+        if (file) {
+            // Delete old image from Cloudinary
+            if (existingUser.avatar) {
+                const publicId = extractCloudinaryPublicId(existingUser.avatar);
+                await deleteFromCloudinary(publicId);
+            }
+
+            // Upload new thumbnail
+            const result = await uploadSingleOnCloudinary(file.path, "users");
+            if (result?.secure_url) updateData.avatar = result.secure_url;
+        }
+
+        // Update user
+        const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+            new: true, // Return updated document
+            runValidators: true, // Run Mongoose validators
+        });
+
+        return updatedUser;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred"
+        );
+    }
+};
+
 export const UserServices = {
     getOneUser,
     getAllUser,
+    updateUser,
 };

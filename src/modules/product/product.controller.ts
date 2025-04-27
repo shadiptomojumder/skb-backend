@@ -41,7 +41,6 @@ const getAllProduct = asyncErrorHandler(async (req: Request, res: Response) => {
         "page",
         "sortBy",
         "sortOrder",
-        "all",
     ]);
     const user: IAuthUser = req.user as IAuthUser;
 
@@ -56,10 +55,9 @@ const getAllProduct = asyncErrorHandler(async (req: Request, res: Response) => {
 });
 
 // Controller function to get a single product by ID
-const getSingleProduct = asyncErrorHandler(
+const getProductById = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const id = req.params.id;
-        const product = await ProductService.getSingleProduct(id);
+        const product = await ProductService.getProductById(req);
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
@@ -93,7 +91,7 @@ export const productController = {
     createProduct,
     updateProduct,
     getAllProduct,
-    getSingleProduct,
+    getProductById,
     deleteProduct,
     deleteProductImage
 };

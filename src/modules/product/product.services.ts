@@ -132,9 +132,9 @@ const updateProduct = async (req: Request) => {
         const { productId } = req.params;
 
         // Generate an array of strings for file path
-        const filePaths = (req.files as Express.Multer.File[]).map(
-            (file) => file.path
-        );
+        // const filePaths = (req.files as Express.Multer.File[]).map(
+        //     (file) => file.path
+        // );
 
         // Validate the request body against the product schema
         const parseBody = productUpdateSchema.safeParse(req.body);
@@ -208,15 +208,23 @@ const updateProduct = async (req: Request) => {
 
         // Update product fields
         Object.assign(product, parseBody.data);
+        // Generate an array of strings for file path
+        // Safely extract file paths
+        const filePaths = Array.isArray(req.files)
+            ? (req.files as Express.Multer.File[]).map((file) => file.path)
+            : [];
 
-        // Upload images to Cloudinary
-        const uploadResults = await uploadMultipleOnCloudinary(
-            filePaths,
-            "products"
-        );
-        const newImageUrls = uploadResults.map((image) => image.url);
-        console.log("The imageUrls  is:", newImageUrls);
-
+        // Upload images to Cloudinary only if there are new files
+        let newImageUrls: string[] = [];
+        if (filePaths.length > 0) {
+            const uploadResults = await uploadMultipleOnCloudinary(
+                filePaths,
+                "products"
+            );
+            newImageUrls = Array.isArray(uploadResults)
+                ? uploadResults.map((image) => image.url)
+                : [];
+        }
 
         // Append new images if uploaded
         if (newImageUrls.length > 0) {
@@ -226,7 +234,6 @@ const updateProduct = async (req: Request) => {
         console.log("The Updated Product:", product);
 
         await product.save();
-
 
         // // If product is not found, throw a BAD_REQUEST error
         if (!product) {
@@ -271,6 +278,16 @@ const getAllProduct = async (
                 if (!isNaN(price)) {
                     andConditions.push({ [key]: { $eq: price } });
                 }
+            } else if (key === "category") {
+                // Convert category to ObjectId
+                if (mongoose.Types.ObjectId.isValid(filters[key])) {
+                    andConditions.push({ [key]: filters[key] });
+                }
+            } else if (key === "isWeekendDeal" || key === "isFeatured") {
+                // Ensure boolean conversion
+                const booleanValue =
+                    filters[key] === "true" || filters[key] === true;
+                andConditions.push({ [key]: booleanValue });
             } else {
                 andConditions.push({ [key]: { $eq: filters[key] } });
             }
@@ -278,6 +295,7 @@ const getAllProduct = async (
 
         const whereConditions =
             andConditions.length > 0 ? { $and: andConditions } : {};
+        // console.log("The whereConditions is:", whereConditions);
 
         // Fetch products with filters, pagination, and sorting
         const result = await Product.find(whereConditions)
@@ -321,11 +339,25 @@ const getAllProduct = async (
 };
 
 // Function to get a single product by ID
-const getSingleProduct = async (id: string) => {
+const getProductById = async (req:Request) => {
     try {
-        // Retrieve the product with the specified ID from the database
-        const product = await Product.findById(id).populate("category");
+        // Product Id
+        const { productId } = req.params;
+        console.log("The Product ID is:", productId);
+        
+        if (!productId) {
+            throw new ApiError(StatusCodes.BAD_REQUEST, "Product ID is required");
+        }
 
+        // Validate the productId
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Invalid Product ID format");
+        }
+
+        // Retrieve the product with the specified ID from the database
+        const product = await Product.findById(productId).populate("category");
+        console.log("Product is:", product);
+        
         // If the product is not found, throw a NOT_FOUND error
         if (!product) {
             throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
@@ -333,6 +365,8 @@ const getSingleProduct = async (id: string) => {
 
         return product;
     } catch (error) {
+        console.log("Error in getProductById:", error);
+        
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
@@ -344,17 +378,17 @@ const getSingleProduct = async (id: string) => {
 // Function to delete a single product by ID
 const deleteProducts = async (req: Request) => {
     try {
-        const { id } = req.params;
+        const { productId } = req.params;
         const { ids } = req.body;
-        if (id) {
+        if (productId) {
             // Find the category to get the thumbnail (if exists)
-            const product = await Product.findById(id);
+            const product = await Product.findById(productId);
             if (!product) {
                 throw new ApiError(StatusCodes.NOT_FOUND, "Product not found");
             }
 
             // First, delete the product from the database
-            const deletedProduct = await Product.findByIdAndDelete(id);
+            const deletedProduct = await Product.findByIdAndDelete(productId);
             if (!deletedProduct) {
                 throw new ApiError(
                     StatusCodes.INTERNAL_SERVER_ERROR,
@@ -435,7 +469,10 @@ const deleteProductImage = async (req: Request) => {
         const { imageUrl } = req.body; // Image URL to be deleted
 
         if (!imageUrl) {
-            throw new ApiError(StatusCodes.BAD_REQUEST, "Image URL is required.");
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Image URL is required."
+            );
         }
 
         // Find the product by ID
@@ -446,7 +483,10 @@ const deleteProductImage = async (req: Request) => {
 
         // Check if the image exists in the product
         if (!product.images.includes(imageUrl)) {
-            throw new ApiError(StatusCodes.NOT_FOUND, "Image not found in product.");
+            throw new ApiError(
+                StatusCodes.NOT_FOUND,
+                "Image not found in product."
+            );
         }
 
         // Prevent deletion if only one image is left
@@ -478,12 +518,11 @@ const deleteProductImage = async (req: Request) => {
     }
 };
 
-
 export const ProductService = {
     createProduct,
     updateProduct,
     getAllProduct,
-    getSingleProduct,
+    getProductById,
     deleteProducts,
-    deleteProductImage
+    deleteProductImage,
 };

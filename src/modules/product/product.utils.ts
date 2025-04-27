@@ -20,6 +20,9 @@ export const productFilterAbleFields: string[] = [
     "stock",
     "sku",
     "category",
+    "isActive",
+    "isWeekendDeal",
+    "isFeatured",
     "createdAt",
     "updatedAt",
 ];

@@ -3,8 +3,8 @@ import { Error as MongooseError } from "mongoose";
 import { ZodError } from "zod";
 import config from "../config";
 import ApiError from "../errors/ApiError";
-import handleClientError from "../errors/handleClientError";
-import handleValidationError from "../errors/handleValidationError";
+import handleMongooseError from "../errors/handleClientError";
+import handleMongooseValidationError from "../errors/handleValidationError";
 import handleZodError from "../errors/handleZodError";
 import { IGenericErrorMessage } from "../interfaces/error";
 import { errorlogger } from "../shared/logger";
@@ -29,7 +29,7 @@ const globalErrorHandler: ErrorRequestHandler = (
 
     // Handle Mongoose validation errors
     if (error instanceof MongooseError.ValidationError) {
-        const simplifiedError = handleValidationError(error);
+        const simplifiedError = handleMongooseValidationError(error);
         statusCode = simplifiedError.statusCode;
         message = simplifiedError.message;
         errorMessages = simplifiedError.errorMessages;
@@ -43,7 +43,7 @@ const globalErrorHandler: ErrorRequestHandler = (
     }
     // Handle Mongoose cast errors
     else if (error instanceof MongooseError.CastError) {
-        const simplifiedError = handleClientError(error);
+        const simplifiedError = handleMongooseError(error);
         statusCode = simplifiedError.statusCode;
         message = simplifiedError.message;
         errorMessages = simplifiedError.errorMessages;

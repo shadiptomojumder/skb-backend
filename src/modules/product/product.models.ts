@@ -5,7 +5,6 @@ const ProductSchema = new mongoose.Schema(
         name: {
             type: String,
             required: true,
-            index: true,
         },
         price: {
             type: mongoose.Schema.Types.Decimal128,
@@ -50,6 +49,8 @@ const ProductSchema = new mongoose.Schema(
             ref: "Category",
             required: true,
         },
+        isWeekendDeal: { type: Boolean, default: false },
+        isFeatured: { type: Boolean, default: false },
     },
     {
         timestamps: true,
@@ -68,7 +69,6 @@ ProductSchema.set("toJSON", {
 
 ProductSchema.index({ name: 1 }); // Text Search Optimization
 ProductSchema.index({ category: 1 }); // Faster Category Lookups
-ProductSchema.index({ sku: 1 });
 ProductSchema.index({ price: 1 }); // Price-based Filtering Optimization
 ProductSchema.index({ createdAt: -1 }); // Sorting Optimization
 

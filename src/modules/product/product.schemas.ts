@@ -44,15 +44,12 @@ export const productSchema = z.object({
         .optional(),
 
     isActive: z.boolean().optional(),
+    isWeekendDeal: z.boolean().optional(),
+    isFeatured: z.boolean().optional(),
 
     category: z.string().min(1, { message: "Category is required" }),
 });
 
-// Product Input Schema (used when accepting input from user)
-export const ProductInput = productSchema.extend({
-    // Use the same validation but make the SKU optional if it's auto-generated
-    sku: z.string().optional(),
-});
 
 // Product Update Schema (to handle updates)
 export const productUpdateSchema = productSchema.partial().extend({

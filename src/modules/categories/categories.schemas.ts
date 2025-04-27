@@ -14,6 +14,7 @@ export const categorySchema = z.object({
     .regex(/^[a-z0-9_]+$/, "Value must be lowercase with underscores only") // Enforces proper format
     .trim()
     .optional(),
+  logo: z.any().optional(),
   thumbnail: z.any().optional()
 });
 

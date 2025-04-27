@@ -50,6 +50,33 @@ const deleteBanners = asyncErrorHandler(
     }
 );
 
+// Controller function for Delete a single banner
+const deleteSingleBanner = asyncErrorHandler(
+    async (req: Request, res: Response) => {
+        const result = await BannerService.deleteSingleBanner(req);
+
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: result.message,
+        });
+    }
+);
+
+// Controller function for Delete multiple banners
+const deleteMultipleBanners = asyncErrorHandler(
+    async (req: Request, res: Response) => {
+        const result = await BannerService.deleteMultipleBanners(req);
+
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: result.message,
+        });
+    }
+);
+
+
 // Controller function to delete a category by ID
 const getBannerById = asyncErrorHandler(async (req: Request, res: Response) => {
     const result = await BannerService.getBannerById(req);
@@ -88,6 +115,8 @@ export const bannersController = {
     updateBanner,
     getAllBanners,
     deleteBanners,
+    deleteSingleBanner,
+    deleteMultipleBanners,
     getBannerById,
     uploadBannerImages,
     getBannerImages

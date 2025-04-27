@@ -7,11 +7,15 @@ const CategorySchema = new mongoose.Schema(
             required: true,
             unique: true,
             maxlength: 50,
+            index: true,
         },
         value: {
             type: String,
             required: true,
             unique: true,
+        },
+        logo: {
+            type: String,
         },
         thumbnail: {
             type: String,
@@ -27,11 +31,8 @@ CategorySchema.set("toJSON", {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v; // Optional: remove __v
-    }
+    },
 });
-
-CategorySchema.index({ title: 1 });
-CategorySchema.index({ value: 1 });
 
 const Category = mongoose.model("Category", CategorySchema);
 

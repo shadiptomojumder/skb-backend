@@ -217,6 +217,95 @@ const deleteBanners = async (req: Request) => {
     }
 };
 
+// Function to delete a single banner by ID
+const deleteSingleBanner = async (req: Request) => {
+    try {
+        const { bannerId } = req.params;
+
+        if (!bannerId) {
+            throw new ApiError(StatusCodes.BAD_REQUEST, "Banner ID is required");
+        }
+
+        const banner = await Banner.findById(bannerId);
+        if (!banner) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Banner not found");
+        }
+
+        const deletedBanner = await Banner.findByIdAndDelete(bannerId);
+        if (!deletedBanner) {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "Failed to delete banner from database"
+            );
+        }
+
+        if (banner.image) {
+            const publicId = extractCloudinaryPublicId(banner.image);
+            await deleteFromCloudinary(publicId);
+        }
+
+        return { message: "Banner deleted successfully" };
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred while deleting the banner"
+        );
+    }
+};
+
+// Function to delete multiple banners by IDs
+const deleteMultipleBanners = async (req: Request) => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "'ids' must be a non-empty array"
+            );
+        }
+
+        const existingBanners = await Banner.find({ _id: { $in: ids } });
+
+        if (existingBanners.length !== ids.length) {
+            throw new ApiError(
+                StatusCodes.NOT_FOUND,
+                "One or more banner IDs do not exist"
+            );
+        }
+
+        const result = await Banner.deleteMany({ _id: { $in: ids } });
+
+        if (result.deletedCount !== ids.length) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Some banners could not be deleted"
+            );
+        }
+
+        await Promise.all(
+            existingBanners.map(async (banner) => {
+                if (banner.image) {
+                    const publicId = extractCloudinaryPublicId(banner.image);
+                    await deleteFromCloudinary(publicId);
+                }
+            })
+        );
+
+        return {
+            message: `${result.deletedCount} banners deleted successfully`,
+        };
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred while deleting banners"
+        );
+    }
+};
+
+
 // Function to create a new product
 const uploadBannerImages = async (req: Request) => {
     try {
@@ -282,6 +371,8 @@ export const BannerService = {
     updateBanner,
     getAllBanners,
     deleteBanners,
+    deleteSingleBanner,
+    deleteMultipleBanners,
     getBannerById,
     uploadBannerImages,
     getBannerImages,

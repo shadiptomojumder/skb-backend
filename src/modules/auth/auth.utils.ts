@@ -1,48 +1,84 @@
-import { jwtHelpers } from "@/helpers/jwtHelpers";
+import config from "@/config";
 import * as bcrypt from "bcrypt";
-import { Secret } from "jsonwebtoken";
+import jwt, { JwtPayload, Secret, SignOptions } from "jsonwebtoken";
 import { BlacklistedToken } from "./auth.model";
 
 // Function to compare plain text password with hashed password
 const comparePasswords = async (
-  plainTextPassword: string,
-  hashedPassword: string
+    plainTextPassword: string,
+    hashedPassword: string
 ): Promise<boolean> => {
-  try {
-    const match: boolean = await bcrypt.compare(
-      plainTextPassword,
-      hashedPassword
-    );
-    return match;
-  } catch (error) {
-    throw new Error("Error comparing passwords");
-  }
+    try {
+        const match: boolean = await bcrypt.compare(
+            plainTextPassword,
+            hashedPassword
+        );
+        return match;
+    } catch (error) {
+        throw new Error("Error comparing passwords");
+    }
 };
 
+interface CustomJwtPayload extends JwtPayload {
+  id?: string | null;
+  email?: string |null ;
+  role?: string | null;
+}
+type UnitAnyCase = "s" | "m" | "h" | "d";
+
+export type StringValue =
+    | `${number}` // e.g., "60"
+    | `${number}${UnitAnyCase}` // e.g., "60s", "2h", "7d"
+    | `${number} ${UnitAnyCase}`; // e.g., "60 s", "2 h"
+
 // Function to generate a JWT token
-const generateToken = (
-  payload: Record<string, unknown>,
-  secret: Secret,
-  expiresIn: string
-) => {
-  return jwtHelpers.createToken(payload, secret, expiresIn);
+export const generateToken = (payload: CustomJwtPayload): string => {
+    if (!config.jwt.secret || !config.jwt.expires_in) {
+        throw new Error(
+            "JWT secret or expiration time is not defined in config"
+        );
+    }
+
+    try {
+        const signOptions: SignOptions = {
+            algorithm: "HS256",
+            expiresIn: config.jwt.expires_in,
+        };
+        return jwt.sign(payload, config.jwt.secret as Secret, signOptions);
+    } catch (error) {
+        console.log("Error generating:", error);
+
+        throw new Error("Error generating token");
+    }
+};
+
+// Function to verify a JWT token
+export const verifyToken = (token: string): CustomJwtPayload => {
+    if (!config.jwt.secret) {
+        throw new Error("JWT secret is not defined in config");
+    }
+    try {
+        return jwt.verify(token, config.jwt.secret as Secret) as CustomJwtPayload;
+    } catch (error) {
+        throw new Error("Invalid or expired token");
+    }
 };
 
 // Function to blacklist a token
 const blacklistToken = async (token: string) => {
-  await BlacklistedToken.create({ token });
+    await BlacklistedToken.create({ token });
 };
 
 // Function to check if a token is blacklisted
 const isTokenBlacklisted = async (token: string) => {
-  const blacklisted = await BlacklistedToken.findOne({ token });
-  // Return true if the token is found, otherwise false
-  return !!blacklisted;
+    const blacklisted = await BlacklistedToken.findOne({ token });
+    // Return true if the token is found, otherwise false
+    return !!blacklisted;
 };
 
 export const AuthUtils = {
-  comparePasswords,
-  generateToken,
-  blacklistToken,
-  isTokenBlacklisted,
+    comparePasswords,
+    generateToken,
+    blacklistToken,
+    isTokenBlacklisted,
 };

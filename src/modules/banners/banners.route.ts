@@ -20,14 +20,20 @@ router.get("", bannersController.getAllBanners);
 // Get a specific banner by ID
 // router.get("/:bannerId", bannersController.getBannerById);
 
-// Delete a single or multiple banners
-router.delete("/:bannerId?", bannersController.deleteBanners);
-
+// Get a specific banner by ID
 router.post(
     "/images",
     upload.array("images", 10),
     bannersController.uploadBannerImages
 );
 router.get("/images", bannersController.getBannerImages);
+
+// Delete Banner by ID
+router.delete("/:bannerId", bannersController.deleteSingleBanner);
+
+// Delete Multiple Banners
+router.delete("", bannersController.deleteMultipleBanners);
+
+
 
 export const BannerRoutes: Router = router;

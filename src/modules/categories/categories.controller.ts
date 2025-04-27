@@ -43,18 +43,32 @@ const getAllCategory = asyncErrorHandler(
     }
 );
 
-// Controller function to delete a category by ID
-const deleteCategory = asyncErrorHandler(
+// Controller function for Delete a single category
+const deleteSingleCategory = asyncErrorHandler(
     async (req: Request, res: Response) => {
-        const result = await CategoryService.deleteCategory(req);
+        const result = await CategoryService.deleteSingleCategory(req);
 
         ApiResponse(res, {
             statusCode: StatusCodes.OK,
             success: true,
-            message: `${result.message}`,
+            message: result.message,
         });
     }
 );
+
+// Controller function for Delete multiple categories
+const deleteMultipleCategories = asyncErrorHandler(
+    async (req: Request, res: Response) => {
+        const result = await CategoryService.deleteMultipleCategories(req);
+
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: result.message,
+        });
+    }
+);
+
 
 // Controller function to delete a category by ID
 const getCategoryById = asyncErrorHandler(
@@ -73,6 +87,7 @@ export const categoriesController = {
     createCategory,
     updateCategory,
     getAllCategory,
-    deleteCategory,
+    deleteSingleCategory,
+    deleteMultipleCategories,
     getCategoryById,
 };

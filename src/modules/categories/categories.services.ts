@@ -2,35 +2,50 @@ import {
     deleteFromCloudinary,
     uploadSingleOnCloudinary,
 } from "@/shared/cloudinary";
+import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
 import { Request } from "express";
-import fs from "fs";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
 import ApiError from "../../errors/ApiError";
 import Category from "./categories.models";
 import { categorySchema, categoryUpdateSchema } from "./categories.schemas";
-import { deleteLocalFiles } from "@/shared/deleteLocalFiles";
 
 // Function to create a new category
 const createCategory = async (req: Request) => {
     try {
         // Validate the request body against the category schema
         const parseBody = categorySchema.safeParse(req.body);
-        console.log("parseBody is:", parseBody);
+
+        // Check if the request contains files
+        const files = req.files as {
+            [fieldname: string]: Express.Multer.File[];
+        };
 
         // If validation fails, collect error messages and throw a BAD_REQUEST error
         if (!parseBody.success) {
             const errorMessages: string = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
+            // Delete the locally stored file before throwing an error
+            const pathsToDelete = [];
+            if (files["thumbnail"])
+                pathsToDelete.push(files["thumbnail"][0].path);
+            if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+            deleteLocalFiles(pathsToDelete);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
-        // Check if the category image is provided
-        if (!req.file) {
+        // Check if the category images are provided
+        if (!files || !files["thumbnail"] || !files["logo"]) {
+            const pathsToDelete = [];
+            if (files["thumbnail"])
+                pathsToDelete.push(files["thumbnail"][0].path);
+            if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+            deleteLocalFiles(pathsToDelete);
             throw new ApiError(
                 StatusCodes.BAD_REQUEST,
-                "Category image is required"
+                "Both thumbnail and logo images are required"
             );
         }
 
@@ -39,8 +54,6 @@ const createCategory = async (req: Request) => {
             .toLowerCase()
             .replace(/\s+/g, "_") // Convert spaces to underscores
             .replace(/[^a-z0-9_]/g, ""); // Remove special characters
-
-        //console.log("generatedValue is:", generatedValue);
 
         // Check if a category with the same title or value already exists
         const existingCategory = await Category.findOne({
@@ -53,31 +66,43 @@ const createCategory = async (req: Request) => {
         // If category exists, throw a CONFLICT error
         if (existingCategory) {
             // Delete the locally stored file before throwing an error
-            fs.unlinkSync(req.file.path);
+            const pathsToDelete = [];
+            if (files["thumbnail"])
+                pathsToDelete.push(files["thumbnail"][0].path);
+            if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+            deleteLocalFiles(pathsToDelete);
             throw new ApiError(
                 StatusCodes.CONFLICT,
                 "Category with this title or value already exists"
             );
         }
 
-        // Upload the thumbnail image to Cloudinary
+        // Upload the thumbnail and logo images to Cloudinary
         let thumbnailUrl = "";
+        let logoUrl = "";
 
-        if (req.file) {
+        if (files["thumbnail"]) {
             const result = await uploadSingleOnCloudinary(
-                req.file.path,
+                files["thumbnail"][0].path,
                 "categories"
             );
             thumbnailUrl = result?.secure_url || "";
         }
 
-        // console.log("The category thumbnailUrl is: ", thumbnailUrl);
+        if (files["logo"]) {
+            const result = await uploadSingleOnCloudinary(
+                files["logo"][0].path,
+                "categories"
+            );
+            logoUrl = result?.secure_url || "";
+        }
 
         // Create a new category in the database
         const category = new Category({
             ...parseBody.data,
             value: generatedValue,
             thumbnail: thumbnailUrl,
+            logo: logoUrl,
         });
 
         await category.save();
@@ -97,7 +122,11 @@ const updateCategory = async (req: Request) => {
     try {
         // Category Id
         const { categoryId } = req.params;
-        const file = req.file as Express.Multer.File;
+        // Check if the request contains files
+        const files = req.files as {
+            [fieldname: string]: Express.Multer.File[];
+        };
+        // console.log("The Files in Request:",req.files);
 
         // Validate the request body against the category update schema
         const parseBody = categoryUpdateSchema.safeParse(req.body);
@@ -107,7 +136,11 @@ const updateCategory = async (req: Request) => {
             const errorMessages = parseBody.error.errors
                 .map((error) => error.message)
                 .join(",");
-                deleteLocalFiles(file?.path);
+            const pathsToDelete = [];
+            if (files["thumbnail"])
+                pathsToDelete.push(files["thumbnail"][0].path);
+            if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+            deleteLocalFiles(pathsToDelete);
             throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
         }
 
@@ -118,7 +151,11 @@ const updateCategory = async (req: Request) => {
         // Find the existing category
         const existingCategory = await Category.findById(categoryId);
         if (!existingCategory) {
-            deleteLocalFiles(file?.path);
+            const pathsToDelete = [];
+            if (files["thumbnail"])
+                pathsToDelete.push(files["thumbnail"][0].path);
+            if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+            deleteLocalFiles(pathsToDelete);
             throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
         }
 
@@ -130,7 +167,11 @@ const updateCategory = async (req: Request) => {
             });
 
             if (duplicateCategory) {
-                deleteLocalFiles(file?.path);
+                const pathsToDelete = [];
+                if (files["thumbnail"])
+                    pathsToDelete.push(files["thumbnail"][0].path);
+                if (files["logo"]) pathsToDelete.push(files["logo"][0].path);
+                deleteLocalFiles(pathsToDelete);
                 throw new ApiError(
                     StatusCodes.CONFLICT,
                     "A category with this title already exists"
@@ -138,24 +179,61 @@ const updateCategory = async (req: Request) => {
             }
 
             // Generate `value` from `title`
-            updateData.value = title.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+            updateData.value = title
+                .toLowerCase()
+                .replace(/\s+/g, "_")
+                .replace(/[^a-z0-9_]/g, "");
         }
 
-        // Handle image update
-        if (file) {
-            // Delete old image from Cloudinary
-            if (existingCategory.thumbnail) {
-                const publicId = extractCloudinaryPublicId(existingCategory.thumbnail);
-                await deleteFromCloudinary(publicId);
+        // Handle image updates if image is provided
+        if (files && (files["thumbnail"] || files["logo"])) {
+            const pathsToDelete = [];
+            if (files["thumbnail"]) {
+                // Delete old thumbnail from Cloudinary
+                if (existingCategory.thumbnail) {
+                    const publicId = extractCloudinaryPublicId(
+                        existingCategory.thumbnail
+                    );
+                    await deleteFromCloudinary(publicId);
+                }
+                // Upload new thumbnail
+                const result = await uploadSingleOnCloudinary(
+                    files["thumbnail"][0].path,
+                    "categories"
+                );
+                if (result?.secure_url)
+                    updateData.thumbnail = result.secure_url;
+                pathsToDelete.push(files["thumbnail"][0].path);
             }
 
-            // Upload new thumbnail
-            const result = await uploadSingleOnCloudinary(file.path, "categories");
-            if (result?.url) updateData.thumbnail = result.url;
+            if (files["logo"]) {
+                // Delete old logo from Cloudinary
+                if (existingCategory.logo) {
+                    const publicId = extractCloudinaryPublicId(
+                        existingCategory.logo
+                    );
+                    await deleteFromCloudinary(publicId);
+                }
+                // Upload new logo
+                const result = await uploadSingleOnCloudinary(
+                    files["logo"][0].path,
+                    "categories"
+                );
+                if (result?.secure_url) updateData.logo = result.secure_url;
+                pathsToDelete.push(files["logo"][0].path);
+            }
+
+            // Delete the locally stored files after uploading to Cloudinary
+            deleteLocalFiles(pathsToDelete);
         }
 
         // Update the category
-        const updatedCategory = await Category.findByIdAndUpdate(categoryId, updateData, { new: true });
+        const updatedCategory = await Category.findByIdAndUpdate(
+            categoryId,
+            updateData,
+            { new: true }
+        );
+
         if (!updatedCategory)
             throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
 
@@ -216,84 +294,122 @@ const getCategoryById = async (req: Request) => {
     }
 };
 
-// Function to delete a category by ID
-const deleteCategory = async (req: Request) => {
+// Delete a single category By ID
+const deleteSingleCategory = async (req: Request) => {
     try {
-        const { id } = req.params;
-        const { ids } = req.body;
+        const { categoryId } = req.params;
 
-        if (id) {
-            // Find the category to get the thumbnail (if exists)
-            const category = await Category.findById(id);
-            if (!category) {
-                throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
-            }
-
-            // First, delete the category from the database
-            const deletedCategory = await Category.findByIdAndDelete(id);
-            if (!deletedCategory) {
-                throw new ApiError(
-                    StatusCodes.INTERNAL_SERVER_ERROR,
-                    "Failed to delete category"
-                );
-            }
-
-            // Delete image from Cloudinary if the category has a thumbnail
-            if (category.thumbnail) {
-                const publicId = extractCloudinaryPublicId(category.thumbnail);
-                await deleteFromCloudinary(publicId);
-            }
-
-            return { message: "Category deleted successfully" };
-        } else if (ids && Array.isArray(ids)) {
-            // Validate that 'ids' is an array and contains valid values
-            if (!Array.isArray(ids) || ids.length === 0) {
-                throw new ApiError(
-                    StatusCodes.BAD_REQUEST,
-                    "Invalid request. 'ids' must be a non-empty array"
-                );
-            }
-
-            // Fetch all categories to ensure they exist
-            const existingCategories = await Category.find({
-                _id: { $in: ids },
-            });
-            if (existingCategories.length !== ids.length) {
-                throw new ApiError(
-                    StatusCodes.NOT_FOUND,
-                    "One or more category IDs do not exist"
-                );
-            }
-
-            // Delete categories from database first
-            const result = await Category.deleteMany({ _id: { $in: ids } });
-            if (result.deletedCount !== ids.length) {
-                throw new ApiError(
-                    StatusCodes.INTERNAL_SERVER_ERROR,
-                    "Some categories could not be deleted"
-                );
-            }
-
-            // If successful, delete associated images
-            for (const category of existingCategories) {
-                if (category.thumbnail) {
-                    const publicId = extractCloudinaryPublicId(
-                        category.thumbnail
-                    );
-                    await deleteFromCloudinary(publicId);
-                }
-            }
-            return {
-                message: `${result.deletedCount} categories deleted successfully`,
-            };
-        } else {
-            throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid request");
+        if (!categoryId) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Category ID is required"
+            );
         }
+
+        const category = await Category.findById(categoryId);
+        if (!category) {
+            throw new ApiError(StatusCodes.NOT_FOUND, "Category not found");
+        }
+
+        const deletedCategory = await Category.findByIdAndDelete(categoryId);
+        if (!deletedCategory) {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "Failed to delete category"
+            );
+        }
+
+        // Delete images from Cloudinary if they exist
+        const pathsToDelete: string[] = [];
+        if (category.thumbnail) {
+            const publicId = extractCloudinaryPublicId(category.thumbnail);
+            await deleteFromCloudinary(publicId);
+            pathsToDelete.push(category.thumbnail);
+        }
+        if (category.logo) {
+            const publicId = extractCloudinaryPublicId(category.logo);
+            await deleteFromCloudinary(publicId);
+            pathsToDelete.push(category.logo);
+        }
+
+        // Delete the locally stored files
+        deleteLocalFiles(pathsToDelete);
+
+        return { message: "Category deleted successfully" };
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
+            "An unexpected error occurred while deleting the category"
+        );
+    }
+};
+
+// Delete multiple categories
+const deleteMultipleCategories = async (req: Request) => {
+    try {
+        const { ids } = req.body;
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Invalid request. 'ids' must be a non-empty array"
+            );
+        }
+        // Validate the ids to ensure they're valid ObjectId strings
+        const invalidIds = ids.filter(
+            (id) => !mongoose.Types.ObjectId.isValid(id)
+        );
+        if (invalidIds.length > 0) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                `Invalid ObjectId(s): ${invalidIds.join(", ")}`
+            );
+        }
+
+        // Fetch all categories to ensure they exist
+        const existingCategories = await Category.find({
+            _id: { $in: ids },
+        });
+
+        if (existingCategories.length !== ids.length) {
+            throw new ApiError(
+                StatusCodes.NOT_FOUND,
+                "One or more category IDs do not exist"
+            );
+        }
+
+        const result = await Category.deleteMany({ _id: { $in: ids } });
+        if (result.deletedCount !== ids.length) {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "Some categories could not be deleted"
+            );
+        }
+
+        // Delete associated images from Cloudinary
+        const pathsToDelete: string[] = [];
+        for (const category of existingCategories) {
+            if (category.thumbnail) {
+                const publicId = extractCloudinaryPublicId(category.thumbnail);
+                await deleteFromCloudinary(publicId);
+                pathsToDelete.push(category.thumbnail);
+            }
+            if (category.logo) {
+                const publicId = extractCloudinaryPublicId(category.logo);
+                await deleteFromCloudinary(publicId);
+                pathsToDelete.push(category.logo);
+            }
+        }
+
+        return {
+            message: `${result.deletedCount} categories deleted successfully`,
+        };
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `An unexpected error occurred while deleting the categories:`
         );
     }
 };
@@ -302,6 +418,7 @@ export const CategoryService = {
     createCategory,
     updateCategory,
     getAllCategory,
-    deleteCategory,
+    deleteSingleCategory,
+    deleteMultipleCategories,
     getCategoryById,
 };

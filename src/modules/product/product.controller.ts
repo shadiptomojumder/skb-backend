@@ -67,15 +67,32 @@ const getProductById = asyncErrorHandler(
     }
 );
 
-// Controller function to delete a single or multiple products
-const deleteProduct = asyncErrorHandler(async (req: Request, res: Response) => {
-    const result = await ProductService.deleteProducts(req);
-    ApiResponse(res, {
-        statusCode: StatusCodes.OK,
-        success: true,
-        message: `${result.message}`,
-    });
-});
+// Controller function to delete a single product
+const deleteSingleProduct = asyncErrorHandler(
+    async (req: Request, res: Response) => {
+        const result = await ProductService.deleteSingleProduct(req);
+
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: result.message,
+        });
+    }
+);
+
+// Controller function to delete multiple products
+const deleteMultipleProducts = asyncErrorHandler(
+    async (req: Request, res: Response) => {
+        const result = await ProductService.deleteMultipleProducts(req);
+
+        ApiResponse(res, {
+            statusCode: StatusCodes.OK,
+            success: true,
+            message: result.message,
+        });
+    }
+);
+
 
 // Controller function to delete product image
 const deleteProductImage = asyncErrorHandler(async (req: Request, res: Response) => {
@@ -92,6 +109,7 @@ export const productController = {
     updateProduct,
     getAllProduct,
     getProductById,
-    deleteProduct,
+    deleteSingleProduct,
+    deleteMultipleProducts,
     deleteProductImage
 };

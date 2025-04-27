@@ -112,8 +112,10 @@ const createCategory = async (req: Request) => {
         if (error instanceof ApiError) throw error; // Keep the original error's status code
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
-        ); // Only catch non-ApiErrors
+            `An unexpected error occurred while creating the category:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
+        );
     }
 };
 
@@ -244,7 +246,9 @@ const updateCategory = async (req: Request) => {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
+            `An unexpected error occurred while updating category:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
         );
     }
 };
@@ -266,7 +270,9 @@ const getAllCategory = async (req: Request) => {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
+            `An unexpected error occurred while getting all categories:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
         );
     }
 };
@@ -289,7 +295,9 @@ const getCategoryById = async (req: Request) => {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred"
+            `An unexpected error occurred while getting category By ID:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
         );
     }
 };
@@ -303,6 +311,14 @@ const deleteSingleCategory = async (req: Request) => {
             throw new ApiError(
                 StatusCodes.BAD_REQUEST,
                 "Category ID is required"
+            );
+        }
+
+        // Validate the productId to ensure it's a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                `Invalid Category Id: ${categoryId}`
             );
         }
 
@@ -340,7 +356,9 @@ const deleteSingleCategory = async (req: Request) => {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred while deleting the category"
+            `An unexpected error occurred while deleting the category:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
         );
     }
 };
@@ -363,7 +381,7 @@ const deleteMultipleCategories = async (req: Request) => {
         if (invalidIds.length > 0) {
             throw new ApiError(
                 StatusCodes.BAD_REQUEST,
-                `Invalid ObjectId(s): ${invalidIds.join(", ")}`
+                `Invalid Category Id(s): ${invalidIds.join(", ")}`
             );
         }
 
@@ -409,7 +427,9 @@ const deleteMultipleCategories = async (req: Request) => {
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            `An unexpected error occurred while deleting the categories:`
+            `An unexpected error occurred while deleting categories:${
+                error instanceof Error ? error.message : "Unknown error"
+            }`
         );
     }
 };

@@ -79,10 +79,7 @@ const createProduct = async (req: Request) => {
             : parseBody.data.price;
 
         // Generate a unique SKU for the product
-        const sku = await generateSku(
-            parseBody.data.category,
-            parseBody.data.name
-        );
+        const sku = await generateSku();
         console.log("The Product SKU is:", sku);
 
         // Create new product linked to the category

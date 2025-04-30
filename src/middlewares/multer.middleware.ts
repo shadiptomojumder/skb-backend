@@ -2,18 +2,22 @@ import multer, { FileFilterCallback } from "multer";
 import path from "path";
 import fs from "fs";
 import { Request } from "express";
+import { v4 as uuidv4 } from "uuid";
 
 // Configure storage for Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const tempDir = path.join(__dirname, "../../uploads");
+        const tempDir = path.join(__dirname, "../public");
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
         cb(null, tempDir);
     },
     filename: function (req, file, cb) {
-        cb(null, `${Date.now()}-${file.originalname}`);
+        const ext = path.extname(file.originalname);
+        const baseName = path.basename(file.originalname, ext).replace(/\s+/g, "_");
+        const uniqueName = `${uuidv4()}-${Date.now()}-${baseName}${ext}`;
+        cb(null, uniqueName);
     }
 });
 

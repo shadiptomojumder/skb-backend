@@ -28,24 +28,18 @@ export const productFilterAbleFields: string[] = [
 ];
 
 // Function to generate a unique SKU for a product using the provided category and product name
-export const generateSku = async (category: string, productName: string): Promise<string> => {
-  const categoryCode = category.substring(0, 3).toUpperCase(); // First 3 letters of category
-  const productCode = productName.substring(0, 3).toUpperCase(); // First 3 letters of product name
-  const timestamp = Date.now().toString(36).slice(-4); // Unique timestamp (Base36, last 4 chars)
+export const generateSku = async (): Promise<string> => {
+    let sku = Math.floor(10000 + Math.random() * 90000).toString(); // Generate a 5-digit number
   
-  let uniqueId = Math.floor(1000 + Math.random() * 9000).toString(); // Generate a 4-digit random number
-  let sku = `${categoryCode}-${productCode}-${timestamp}-${uniqueId}`; // Example: "ELE-LAP-X1A3-3456"
-
-  // Ensure SKU is unique in the database
-  let existingProduct = await Product.findOne({ sku });
-  while (existingProduct) {
-      uniqueId = Math.floor(1000 + Math.random() * 9000).toString(); // Generate new random number
-      sku = `${categoryCode}-${productCode}-${timestamp}-${uniqueId}`;
-      existingProduct = await Product.findOne({ sku }); // Check again
-  }
-
-  return sku;
-};
+    // Ensure SKU is unique in the database
+    let existingProduct = await Product.findOne({ sku });
+    while (existingProduct) {
+      sku = Math.floor(10000 + Math.random() * 90000).toString(); // Generate a new 5-digit number
+      existingProduct = await Product.findOne({ sku });
+    }
+  
+    return sku;
+  };
 
 // Function to delete local files
 export const deleteLocalFiles = (filePaths: string[]) => {

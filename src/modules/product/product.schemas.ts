@@ -19,12 +19,7 @@ export const productSchema = z.object({
         .number()
         .positive({ message: "Final price must be a positive number" })
         .optional(),
-
-    quantity: z
-        .string()
-        .min(1, { message: "Quantity is required" })
-        .max(50, { message: "Quantity should not exceed 50 characters" }),
-
+        
     description: z
         .string()
         .max(1000, { message: "Description should not exceed 1000 characters" })
@@ -49,7 +44,6 @@ export const productSchema = z.object({
 
     category: z.string().min(1, { message: "Category is required" }),
 });
-
 
 // Product Update Schema (to handle updates)
 export const productUpdateSchema = productSchema.partial().extend({

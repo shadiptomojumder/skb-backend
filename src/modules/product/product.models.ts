@@ -20,10 +20,6 @@ const ProductSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.Decimal128,
             default: 0.0,
         },
-        quantity: {
-            type: String,
-            required: true,
-        },
         description: {
             type: String,
         },
@@ -49,8 +45,8 @@ const ProductSchema = new mongoose.Schema(
             ref: "Category",
             required: true,
         },
-        isWeekendDeal: { type: Boolean, default: false },
-        isFeatured: { type: Boolean, default: false },
+        // isWeekendDeal: { type: Boolean, default: false },
+        // isFeatured: { type: Boolean, default: false },
     },
     {
         timestamps: true,

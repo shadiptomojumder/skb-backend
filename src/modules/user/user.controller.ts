@@ -1,8 +1,8 @@
 import ApiResponse from "@/shared/ApiResponse";
 import asyncErrorHandler from "@/shared/asyncErrorHandler";
 import pick from "@/shared/pick";
-import { UserServices } from "@/user/user.services";
-import { userFilterAbleFields } from "@/user/user.utils";
+import { UserServices } from "./user.services";
+import { userFilterAbleFields } from "./user.utils";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { IAuthUser } from "../../interfaces/common";

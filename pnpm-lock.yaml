@@ -75,6 +75,9 @@ importers:
         specifier: ^3.24.3
         version: 3.24.3
     devDependencies:
+      '@tsconfig/node22':
+        specifier: ^22.0.1
+        version: 22.0.1
       '@types/bcrypt':
         specifier: ^5.0.2
         version: 5.0.2
@@ -243,6 +246,9 @@ packages:
 
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
+
+  '@tsconfig/node22@22.0.1':
+    resolution: {integrity: sha512-VkgOa3n6jvs1p+r3DiwBqeEwGAwEvnVCg/hIjiANl5IEcqP3G0u5m8cBJspe1t9qjZRlZ7WFgqq5bJrGdgAKMg==}
 
   '@types/bcrypt@5.0.2':
     resolution: {integrity: sha512-6atioO8Y75fNcbmj0G7UjI9lXN2pQ/IGJ2FWT4a/btd0Lk9lQalHLKhkgKVZ3r+spnmWUKfbMi1GEe9wyHQfNQ==}
@@ -1839,6 +1845,8 @@ snapshots:
   '@tsconfig/node14@1.0.3': {}
 
   '@tsconfig/node16@1.0.4': {}
+
+  '@tsconfig/node22@22.0.1': {}
 
   '@types/bcrypt@5.0.2':
     dependencies:

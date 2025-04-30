@@ -1,4 +1,4 @@
-import { AuthServices } from "@/auth/auth.services";
+import { AuthServices } from "./auth.services";
 import config from "@/config";
 import ApiResponse from "@/shared/ApiResponse";
 import asyncErrorHandler from "@/shared/asyncErrorHandler";

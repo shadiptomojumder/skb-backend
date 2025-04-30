@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 import { JwtPayload } from 'jsonwebtoken';
 
-interface CustomJwtPayload extends JwtPayload {
+export interface CustomJwtPayload extends JwtPayload {
   id: string;
   email: string;
 }
@@ -9,7 +9,7 @@ interface CustomJwtPayload extends JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user: CustomJwtPayload | null;
+      user: JwtPayload | null;
     }
   }
 }

@@ -1,6 +1,6 @@
 import auth from "@/middlewares/auth";
 import { upload } from "@/middlewares/multer.middleware";
-import { UserController } from "@/user/user.controller";
+import { UserController } from "./user.controller";
 import express, { Router } from "express";
 import { ENUM_USER_ROLE } from "../../enums/user";
 

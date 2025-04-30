@@ -1,4 +1,4 @@
-import { loginDataSchema, signupDataSchema } from "@/auth/auth.schemas";
+import { loginDataSchema, signupDataSchema } from "./auth.schemas";
 import ApiError from "@/errors/ApiError";
 import { normalizePhoneNumber } from "@/shared/normalizePhoneNumber";
 import { Request } from "express";
@@ -134,8 +134,6 @@ const login = async (req: Request) => {
 
         // Save the refreshToken in the database
         await User.findByIdAndUpdate(isUserExist._id, { refreshToken });
-
-        console.log("The Exist User is:", isUserExist);
 
         // Prepare sanitized user object
         const sanitizedUser = {

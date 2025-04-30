@@ -1,4 +1,4 @@
-import { AuthController } from "@/auth/auth.controller";
+import { AuthController } from "./auth.controller";
 import express, { Router } from "express";
 
 // Create a new Express router

@@ -64,7 +64,7 @@ app.get("/test", async (req: Request, res: Response) => {
   });
 });
 app.get('/', (req, res) => {
-  res.send('Lalon Store Server is running..!')
+  res.send('SKB BEST Server is running..!')
 })
 
 // Global error handler middleware

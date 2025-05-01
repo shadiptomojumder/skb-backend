@@ -8,12 +8,6 @@ const BannerSchema = new mongoose.Schema(
         image: {
             type: String,
         },
-        order: {
-            type: Number,
-            unique: true, // Prevents duplicate order values
-            index: true, // Improves sorting performance
-            default: 0, // To be assigned dynamically when creating a banner
-        },
         isActive: {
             type: Boolean,
             default: true,

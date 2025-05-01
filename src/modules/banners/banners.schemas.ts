@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // banner validation schema
 export const bannerSchema = z.object({
-    order: z.number().optional(),
+    title: z.string().min(1, "Title is required"),
     image: z.any().optional(),
     isActive: z.boolean().optional(),
 });

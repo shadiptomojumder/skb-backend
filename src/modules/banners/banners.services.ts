@@ -1,6 +1,7 @@
 import cloudinary, {
     deleteFromCloudinary,
     uploadMultipleOnCloudinary,
+    uploadSingleOnCloudinary,
 } from "@/shared/cloudinary";
 import { extractCloudinaryPublicId } from "@/shared/extractCloudinaryPublicId";
 import { Request } from "express";
@@ -9,21 +10,56 @@ import ApiError from "../../errors/ApiError";
 
 import mongoose from "mongoose";
 import { Banner } from "./banners.models";
-import { bannerUpdateSchema } from "./banners.schemas";
+import { bannerSchema, bannerUpdateSchema } from "./banners.schemas";
 
 // Function to create a new Banner
 const createBanner = async (req: Request) => {
     try {
-        // Determine the order for the new banner (last in sequence)
-        const lastBanner = await Banner.findOne().sort({ order: -1 });
-        const newOrder = lastBanner ? lastBanner.order + 1 : 1;
+        console.log("Req.body is:", req.body);
+        console.log("Req.files is:", req.file);
+        
+        // Validate the request body against the category schema
+        const parseBody = bannerSchema.safeParse(req.body);
 
-        // Create a new Banner in the database
-        const banner = await Banner.create({
-            title: `Banner #${newOrder}`,
-            image: "",
-            order: newOrder,
+        // If validation fails, collect error messages and throw a BAD_REQUEST error
+        if (!parseBody.success) {
+            const errorMessages = parseBody.error.errors
+                .map((error) => error.message)
+                .join(", ");
+            throw new ApiError(StatusCodes.BAD_REQUEST, errorMessages);
+        }
+
+        // Check if an image is provided in the request
+        if (!req.file) {
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "An image is required to create a banner."
+            );
+        }
+
+        // Upload the image to Cloudinary
+        const uploadResult = await uploadSingleOnCloudinary(
+            req.file.path,
+            "banners"
+        );
+        
+        // Get the uploaded image URL
+        const imageUrl = uploadResult?.secure_url;
+        if (!imageUrl) {
+            throw new ApiError(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                "Failed to upload image to Cloudinary."
+            );
+        }
+
+        // Create a new banner in the database
+        const banner = new Banner({
+            title: parseBody.data.title,
+            image: imageUrl,
+            isActive: parseBody.data.isActive ?? true,
         });
+
+        await banner.save();
 
         return banner;
     } catch (error) {
@@ -62,7 +98,7 @@ const updateBanner = async (req: Request) => {
 
         // Update the banner with the provided data
         const updatedBanner = await Banner.findByIdAndUpdate(bannerId, {
-            image: parseBody.data.image,
+            title: parseBody.data.title,
             isActive: parseBody.data.isActive,
         });
 
@@ -223,7 +259,10 @@ const deleteSingleBanner = async (req: Request) => {
         const { bannerId } = req.params;
 
         if (!bannerId) {
-            throw new ApiError(StatusCodes.BAD_REQUEST, "Banner ID is required");
+            throw new ApiError(
+                StatusCodes.BAD_REQUEST,
+                "Banner ID is required"
+            );
         }
 
         const banner = await Banner.findById(bannerId);
@@ -304,7 +343,6 @@ const deleteMultipleBanners = async (req: Request) => {
         );
     }
 };
-
 
 // Function to create a new product
 const uploadBannerImages = async (req: Request) => {

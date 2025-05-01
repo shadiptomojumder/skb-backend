@@ -6,6 +6,7 @@ import { CategoryRoutes } from "@/modules/categories/categories.route";
 import { ProductRoutes } from "@/modules/product/product.route";
 import { UploadRoutes } from "@/modules/uploads/uploads.route";
 import { UserRoutes } from "@/modules/user/user.route";
+import { BlogRoutes } from "@/modules/blogs/blogs.route";
 
 const router = express.Router();
 
@@ -38,6 +39,10 @@ const moduleRoutes: ModuleRoute[] = [
     {
         path: "/uploads",
         route: UploadRoutes,
+    },
+    {
+        path: "/blogs",
+        route: BlogRoutes,
     },
 ];
 

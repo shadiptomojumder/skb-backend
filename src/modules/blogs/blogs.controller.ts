@@ -3,6 +3,9 @@ import asyncErrorHandler from "@/shared/asyncErrorHandler";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { BlogService } from "./blogs.services";
+import pick from "@/shared/pick";
+import { blogFilterAbleFields } from "./blogs.utils";
+import { IAuthUser } from "@/interfaces/common";
 
 // Controller function to create a new blog
 const createBlog = asyncErrorHandler(async (req: Request, res: Response) => {
@@ -28,12 +31,27 @@ const updateBlog = asyncErrorHandler(async (req: Request, res: Response) => {
 
 // Controller function to get all blogs
 const getAllBlogs = asyncErrorHandler(async (req: Request, res: Response) => {
-    const result = await BlogService.getAllBlogs(req);
+    // Extract filters from the query parameters using the pick function and userFilterAbleFields array
+    const filters: Record<string, any> = pick(
+        req.query,
+        blogFilterAbleFields
+    );
+    const options: Record<string, any> = pick(req.query, [
+        "limit",
+        "page",
+        "sortBy",
+        "sortOrder",
+    ]);
+    const user: IAuthUser = req.user as IAuthUser;
+
+    const result = await BlogService.getAllBlogs(filters, options, user);
+    
     ApiResponse(res, {
         statusCode: StatusCodes.OK,
         success: true,
         message: "All blogs fetched successfully",
-        data: result,
+        meta: result.meta,
+        data: result.data,
     });
 });
 

@@ -4,6 +4,10 @@ import { Request } from "express";
 import { StatusCodes } from "http-status-codes";
 import { Blog } from "./blogs.model";
 import { blogSchema } from "./blogs.schemas";
+import { IPaginationOptions } from "@/interfaces/pagination";
+import { paginationHelpers } from "@/helpers/paginationHelper";
+import { blogFilterAbleFields } from "./blogs.utils";
+import { IAuthUser } from "@/interfaces/common";
 
 // Service to create a new blog
 const createBlog = async (req: Request) => {
@@ -110,18 +114,61 @@ const updateBlog = async (req: Request) => {
     }
 };
 
-// Service to get all blogs
-const getAllBlogs = async (req: Request) => {
+// Service to get all blogs with filters, pagination, and sorting
+const getAllBlogs = async (filters: any, options: IPaginationOptions, authUser: IAuthUser) => {
     try {
-        const blogs = await Blog.find();
-        return blogs;
+        // Calculate pagination values
+        const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+
+        // Build filter conditions
+        const andConditions: any[] = [];
+        Object.keys(filters).forEach((key) => {
+            if (!filters[key]) return; // Ignore undefined or empty values
+
+            if (blogFilterAbleFields.includes(key)) {
+                if (key === "title") {
+                    // Case-insensitive search for title
+                    andConditions.push({
+                        [key]: { $regex: filters[key], $options: "i" },
+                    });
+                } else {
+                    // Exact match for other fields
+                    andConditions.push({ [key]: filters[key] });
+                }
+            }
+        });
+
+        const whereConditions = andConditions.length > 0 ? { $and: andConditions } : {};
+
+        // Fetch blogs with filters, pagination, and sorting
+        const blogs = await Blog.find(whereConditions)
+            .skip(skip)
+            .limit(limit)
+            .sort(
+                options.sortBy && options.sortOrder
+                    ? { [options.sortBy]: options.sortOrder }
+                    : { createdAt: -1 } // Default to newest first
+            )
+            .exec();
+
+        // Count total blogs matching the conditions
+        const total = await Blog.countDocuments(whereConditions);
+
+        return {
+            meta: {
+                total,
+                page,
+                limit,
+            },
+            data: blogs,
+        };
     } catch (error) {
         console.error("Error fetching blogs:", error);
 
         if (error instanceof ApiError) throw error;
         throw new ApiError(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            `An unexpected error occurred while getting the blogs:${
+            `An unexpected error occurred while getting the blogs: ${
                 error instanceof Error ? error.message : "Unknown error"
             }`
         );
